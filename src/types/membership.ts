@@ -1,0 +1,48 @@
+
+export interface MembershipData {
+  uniqueId: string;
+  memberId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  membershipName: string;
+  endDate: string;
+  location: string; // Now called "Home Location" in sheet
+  currentUsage: string; // New field "Current Usage"
+  itemId: string; // Now called "Id" in sheet
+  orderDate: string; // Now called "Order At" in sheet
+  soldBy: string;
+  membershipId: string;
+  frozen: string;
+  paid: string;
+  status: 'Active' | 'Churned' | 'Frozen'; // Updated to only 3 statuses
+  // New fields for user annotations
+  comments?: string;
+  notes?: string;
+  tags?: string[];
+  // Legacy field for backward compatibility
+  sessionsLeft?: number;
+}
+
+export interface MemberAnnotation {
+  memberId: string;
+  email: string;
+  comments: string;
+  notes: string;
+  tags: string;
+  lastUpdated: string;
+}
+
+export interface FilterOptions {
+  status: string[];
+  locations: string[];
+  membershipTypes: string[];
+  dateRange: {
+    start: string;
+    end: string;
+  };
+  sessionsRange: {
+    min: number;
+    max: number;
+  };
+}
