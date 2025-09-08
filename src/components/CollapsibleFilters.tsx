@@ -42,27 +42,21 @@ interface MultiFilter {
 }
 
 interface CollapsibleFiltersProps {
-  quickFilter: string;
-  onQuickFilterChange: (filter: string) => void;
+  activeFilters: MultiFilter;
+  onFiltersChange: (filters: MultiFilter) => void;
   membershipData: any[];
   availableLocations: string[];
+  filteredDataCount: number;
 }
 
 export const CollapsibleFilters = ({ 
-  quickFilter, 
-  onQuickFilterChange, 
+  activeFilters,
+  onFiltersChange, 
   membershipData,
-  availableLocations 
+  availableLocations,
+  filteredDataCount
 }: CollapsibleFiltersProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<MultiFilter>({
-    status: [],
-    locations: [],
-    membershipTypes: [],
-    dateFilters: [],
-    sessionFilters: [],
-    customFilters: []
-  });
   const [searchTerm, setSearchTerm] = useState("");
   const [sessionRange, setSessionRange] = useState([0, 50]);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -134,39 +128,32 @@ export const CollapsibleFilters = ({
 
   // Multi-filter management
   const toggleFilter = (category: keyof MultiFilter, value: string) => {
-    setActiveFilters(prev => {
-      const currentFilters = prev[category];
-      const isActive = currentFilters.includes(value);
-      
-      let newFilters;
-      if (isActive) {
-        newFilters = currentFilters.filter(f => f !== value);
-      } else {
-        newFilters = [...currentFilters, value];
-      }
-      
-      const updatedFilters = { ...prev, [category]: newFilters };
-      
-      // Notify parent component with combined filter string
-      const allActiveFilters = Object.values(updatedFilters).flat();
-      onQuickFilterChange(allActiveFilters.length > 0 ? 'multi-filter' : 'all');
-      
-      return updatedFilters;
-    });
+    const currentFilters = activeFilters[category];
+    const isActive = currentFilters.includes(value);
+    
+    let newFilters;
+    if (isActive) {
+      newFilters = currentFilters.filter(f => f !== value);
+    } else {
+      newFilters = [...currentFilters, value];
+    }
+    
+    const updatedFilters = { ...activeFilters, [category]: newFilters };
+    onFiltersChange(updatedFilters);
   };
 
   const clearAllFilters = () => {
-    setActiveFilters({
+    const clearedFilters = {
       status: [],
       locations: [],
       membershipTypes: [],
       dateFilters: [],
       sessionFilters: [],
       customFilters: []
-    });
+    };
+    onFiltersChange(clearedFilters);
     setSearchTerm("");
     setSessionRange([0, 50]);
-    onQuickFilterChange('all');
   };
 
   const getActiveFilterCount = () => {
@@ -294,8 +281,8 @@ export const CollapsibleFilters = ({
                   </h3>
                   <p className="text-refined font-medium">
                     {getActiveFilterCount() > 0 
-                      ? `${getActiveFilterCount()} filter(s) active - Multi-select enabled` 
-                      : 'Advanced multi-filter system'}
+                      ? `${getActiveFilterCount()} filter(s) active - Showing ${filteredDataCount} results` 
+                      : 'Comprehensive filter system - Click to expand'}
                   </p>
                 </div>
               </div>
@@ -377,14 +364,12 @@ export const CollapsibleFilters = ({
                     <label className="text-sm font-medium text-muted-foreground">Quick Actions</label>
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" onClick={() => {
-                        setActiveFilters(prev => ({ ...prev, status: ['active'] }));
-                        onQuickFilterChange('multi-filter');
+                        onFiltersChange({ ...activeFilters, status: ['active'] });
                       }}>
                         Active Only
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => {
-                        setActiveFilters(prev => ({ ...prev, sessionFilters: ['low-sessions'] }));
-                        onQuickFilterChange('multi-filter');
+                        onFiltersChange({ ...activeFilters, sessionFilters: ['low-sessions'] });
                       }}>
                         Low Sessions
                       </Button>

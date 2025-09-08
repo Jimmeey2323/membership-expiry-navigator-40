@@ -147,7 +147,22 @@ export const GroupableDataTable = ({
     return <Zap className="h-4 w-4 text-blue-600" />;
   };
 
-  const getGroupColor = (groupName: string) => {
+  const getGroupColor = (groupName: string, index: number = 0) => {
+    const colorVariants = [
+      'from-emerald-500 to-emerald-600',
+      'from-blue-500 to-blue-600', 
+      'from-purple-500 to-purple-600',
+      'from-orange-500 to-orange-600',
+      'from-red-500 to-red-600',
+      'from-indigo-500 to-indigo-600',
+      'from-cyan-500 to-cyan-600',
+      'from-pink-500 to-pink-600',
+      'from-teal-500 to-teal-600',
+      'from-amber-500 to-amber-600',
+      'from-lime-500 to-lime-600',
+      'from-violet-500 to-violet-600'
+    ];
+
     switch (groupBy) {
       case 'status':
         if (groupName === 'Active') return 'from-emerald-500 to-emerald-600';
@@ -155,13 +170,13 @@ export const GroupableDataTable = ({
         if (groupName === 'Frozen') return 'from-blue-500 to-blue-600';
         return 'from-slate-500 to-slate-600';
       case 'location':
-        return 'from-purple-500 to-purple-600';
+        return colorVariants[index % colorVariants.length];
       case 'membershipName':
-        return 'from-orange-500 to-orange-600';
+        return colorVariants[index % colorVariants.length];
       case 'frozen':
         return groupName === 'Frozen' ? 'from-blue-500 to-blue-600' : 'from-emerald-500 to-emerald-600';
       default:
-        return 'from-slate-500 to-slate-600';
+        return colorVariants[index % colorVariants.length];
     }
   };
 
@@ -249,9 +264,9 @@ export const GroupableDataTable = ({
 
             {/* Grouped Tables */}
             <div className="space-y-8">
-              {Object.entries(groupedData).map(([groupName, members]) => {
+              {Object.entries(groupedData).map(([groupName, members], groupIndex) => {
                 const groupTotal = getGroupTotal(members);
-                const colorClass = getGroupColor(groupName);
+                const colorClass = getGroupColor(groupName, groupIndex);
                 
                 return (
                   <div key={groupName} className="space-y-4">

@@ -40,7 +40,14 @@ const Index = () => {
     sessionsRange: { min: 0, max: 100 }
   });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [quickFilter, setQuickFilter] = useState<string>('all');
+  const [activeFilters, setActiveFilters] = useState<any>({
+    status: [],
+    locations: [],
+    membershipTypes: [],
+    dateFilters: [],
+    sessionFilters: [],
+    customFilters: []
+  });
   const [localMembershipData, setLocalMembershipData] = useState<MembershipData[]>([]);
 
   const { data: membershipData = [], isLoading, error, refetch } = useQuery({
@@ -104,11 +111,105 @@ const Index = () => {
     return isNaN(fallbackDate.getTime()) ? new Date(0) : fallbackDate;
   };
 
-  // Enhanced filter application - BOTH filters work together
+  // Enhanced filter application using CollapsibleFilters
   const getFilteredData = (): MembershipData[] => {
     let filteredData = [...localMembershipData];
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    // FIRST: Apply advanced filters
+    // Apply all active filters
+    const allActiveFilters = Object.values(activeFilters).flat();
+    
+    if (allActiveFilters.length > 0) {
+      allActiveFilters.forEach(filterKey => {
+        switch (filterKey) {
+          // Status filters
+          case 'active':
+            filteredData = filteredData.filter(member => member.status === 'Active');
+            break;
+          case 'churned':
+            filteredData = filteredData.filter(member => member.status === 'Churned');
+            break;
+          case 'frozen':
+            filteredData = filteredData.filter(member => member.status === 'Frozen');
+            break;
+          
+          // Session filters
+          case 'sessions':
+            filteredData = filteredData.filter(member => (member.sessionsLeft || 0) > 0);
+            break;
+          case 'no-sessions':
+            filteredData = filteredData.filter(member => (member.sessionsLeft || 0) === 0);
+            break;
+          case 'low-sessions':
+            filteredData = filteredData.filter(member => (member.sessionsLeft || 0) > 0 && (member.sessionsLeft || 0) <= 3);
+            break;
+          case 'medium-sessions':
+            filteredData = filteredData.filter(member => (member.sessionsLeft || 0) >= 4 && (member.sessionsLeft || 0) <= 10);
+            break;
+          case 'high-sessions':
+            filteredData = filteredData.filter(member => (member.sessionsLeft || 0) > 10);
+            break;
+          
+          // Date filters
+          case 'recent':
+            filteredData = filteredData.filter(member => parseDate(member.orderDate) >= thirtyDaysAgo);
+            break;
+          case 'weekly':
+            filteredData = filteredData.filter(member => parseDate(member.orderDate) >= sevenDaysAgo);
+            break;
+          case 'expiring-week':
+            filteredData = filteredData.filter(member => {
+              const endDate = parseDate(member.endDate);
+              return endDate >= now && endDate <= nextWeek && member.status === 'Active';
+            });
+            break;
+          case 'expiring-month':
+            filteredData = filteredData.filter(member => {
+              const endDate = parseDate(member.endDate);
+              return endDate >= now && endDate <= nextMonth && member.status === 'Active';
+            });
+            break;
+          case 'expired':
+            filteredData = filteredData.filter(member => parseDate(member.endDate) < now);
+            break;
+          
+          // Custom filters
+          case 'premium':
+            filteredData = filteredData.filter(member => 
+              member.membershipName && 
+              (member.membershipName.toLowerCase().includes('unlimited') || 
+               member.membershipName.toLowerCase().includes('premium'))
+            );
+            break;
+          case 'high-value':
+            filteredData = filteredData.filter(member => parseFloat(member.paid || '0') > 5000);
+            break;
+          case 'unpaid':
+            filteredData = filteredData.filter(member => 
+              !member.paid || member.paid === '-' || parseFloat(member.paid || '0') === 0
+            );
+            break;
+          
+          // Dynamic location filters
+          default:
+            // Check if it's a location filter
+            if (localMembershipData.some(m => m.location === filterKey)) {
+              filteredData = filteredData.filter(member => member.location === filterKey);
+            }
+            // Check if it's a membership type filter
+            else if (localMembershipData.some(m => m.membershipName === filterKey)) {
+              filteredData = filteredData.filter(member => member.membershipName === filterKey);
+            }
+            break;
+        }
+      });
+    }
+
+    // Apply traditional filters as well
     if (filters.status.length > 0) {
       filteredData = filteredData.filter(member => filters.status.includes(member.status));
     }
@@ -142,87 +243,6 @@ const Index = () => {
         const memberEndDate = parseDate(member.endDate);
         return memberEndDate <= filterEndDate;
       });
-    }
-
-    // SECOND: Apply quick filters on top of advanced filters
-    if (quickFilter !== 'all') {
-      const now = new Date();
-      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-      const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-      switch (quickFilter) {
-        case 'active':
-          filteredData = filteredData.filter(member => member.status === 'Active');
-          break;
-        case 'churned':
-          filteredData = filteredData.filter(member => member.status === 'Churned');
-          break;
-        case 'frozen':
-          filteredData = filteredData.filter(member => member.status === 'Frozen');
-          break;
-        case 'sessions':
-          filteredData = filteredData.filter(member => (member.sessionsLeft || 0) > 0);
-          break;
-        case 'no-sessions':
-          filteredData = filteredData.filter(member => (member.sessionsLeft || 0) === 0);
-          break;
-        case 'low-sessions':
-          filteredData = filteredData.filter(member => (member.sessionsLeft || 0) > 0 && (member.sessionsLeft || 0) <= 3);
-          break;
-        case 'medium-sessions':
-          filteredData = filteredData.filter(member => (member.sessionsLeft || 0) >= 4 && (member.sessionsLeft || 0) <= 10);
-          break;
-        case 'high-sessions':
-          filteredData = filteredData.filter(member => (member.sessionsLeft || 0) > 10);
-          break;
-        case 'recent':
-          filteredData = filteredData.filter(member => parseDate(member.orderDate) >= thirtyDaysAgo);
-          break;
-        case 'weekly':
-          filteredData = filteredData.filter(member => parseDate(member.orderDate) >= sevenDaysAgo);
-          break;
-        case 'expiring-week':
-          filteredData = filteredData.filter(member => {
-            const endDate = parseDate(member.endDate);
-            return endDate >= now && endDate <= nextWeek && member.status === 'Active';
-          });
-          break;
-        case 'expiring-month':
-          filteredData = filteredData.filter(member => {
-            const endDate = parseDate(member.endDate);
-            return endDate >= now && endDate <= nextMonth && member.status === 'Active';
-          });
-          break;
-        case 'premium':
-          filteredData = filteredData.filter(member => 
-            member.membershipName && 
-            (member.membershipName.toLowerCase().includes('unlimited') || 
-             member.membershipName.toLowerCase().includes('premium'))
-          );
-          break;
-        case 'high-value':
-          filteredData = filteredData.filter(member => parseFloat(member.paid || '0') > 5000);
-          break;
-        case 'unpaid':
-          filteredData = filteredData.filter(member => 
-            !member.paid || member.paid === '-' || parseFloat(member.paid || '0') === 0
-          );
-          break;
-        default:
-          // Handle dynamic location and membership type filters
-          const availableLocations = [...new Set(localMembershipData.map(m => m.location).filter(Boolean))];
-          const availableMembershipTypes = [...new Set(localMembershipData.map(m => m.membershipName).filter(Boolean))];
-          
-          if (availableLocations.some(loc => quickFilter === `location-${loc}`)) {
-            const targetLocation = quickFilter.replace('location-', '');
-            filteredData = filteredData.filter(member => member.location === targetLocation);
-          } else if (availableMembershipTypes.includes(quickFilter)) {
-            filteredData = filteredData.filter(member => member.membershipName === quickFilter);
-          }
-          break;
-      }
     }
     
     return filteredData;
@@ -266,12 +286,20 @@ const Index = () => {
       dateRange: { start: '', end: '' },
       sessionsRange: { min: 0, max: 100 }
     });
-    setQuickFilter('all');
+    setActiveFilters({
+      status: [],
+      locations: [],
+      membershipTypes: [],
+      dateFilters: [],
+      sessionFilters: [],
+      customFilters: []
+    });
     toast.success("All filters cleared");
   };
 
   const hasActiveFilters = () => {
-    return quickFilter !== 'all' || 
+    const allActiveFilters = Object.values(activeFilters).flat();
+    return allActiveFilters.length > 0 || 
            filters.status.length > 0 || 
            filters.locations.length > 0 || 
            filters.membershipTypes.length > 0 ||
@@ -407,13 +435,14 @@ const Index = () => {
           </Card>
         </div>
 
-        {/* Enhanced Collapsible Filters - Uses filtered data for accurate counts */}
+        {/* Enhanced Comprehensive Filters Section */}
         <div className="animate-slide-up">
           <CollapsibleFilters
-            quickFilter={quickFilter}
-            onQuickFilterChange={setQuickFilter}
+            activeFilters={activeFilters}
+            onFiltersChange={setActiveFilters}
             membershipData={localMembershipData} // Pass raw data for filter options
             availableLocations={availableLocations}
+            filteredDataCount={filteredData.length}
           />
         </div>
 
