@@ -34,6 +34,7 @@ export const GroupableDataTable = ({
   const [selectedMember, setSelectedMember] = useState<MembershipData | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [groupBy, setGroupBy] = useState<GroupByField>('none');
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const itemsPerPage = 12;
 
   const filteredAndSortedData = useMemo(() => {
@@ -164,6 +165,22 @@ export const GroupableDataTable = ({
     }
   };
 
+  const toggleGroupCollapse = (groupName: string) => {
+    setCollapsedGroups(prev => {
+      const newCollapsed = new Set(prev);
+      if (newCollapsed.has(groupName)) {
+        newCollapsed.delete(groupName);
+      } else {
+        newCollapsed.add(groupName);
+      }
+      return newCollapsed;
+    });
+  };
+
+  const isGroupCollapsed = (groupName: string) => {
+    return collapsedGroups.has(groupName);
+  };
+
   return (
     <>
       <TooltipProvider>
@@ -238,16 +255,24 @@ export const GroupableDataTable = ({
                 
                 return (
                   <div key={groupName} className="space-y-4">
-                    {/* Group Header */}
+                    {/* Group Header - Now Collapsible */}
                     {groupBy !== 'none' && (
-                      <div className={`p-6 rounded-2xl bg-gradient-to-r ${colorClass} text-white shadow-xl`}>
+                      <div className={`p-6 rounded-2xl bg-gradient-to-r ${colorClass} text-white shadow-xl cursor-pointer hover:shadow-2xl transition-all duration-300`} onClick={() => toggleGroupCollapse(groupName)}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white/20 rounded-xl transition-transform duration-300 hover:scale-110">
+                              {isGroupCollapsed(groupName) ? <ChevronDown className="h-6 w-6" /> : <ChevronUp className="h-6 w-6" />}
+                            </div>
                             <div className="p-2 bg-white/20 rounded-xl">
                               <Layers className="h-6 w-6" />
                             </div>
                             <div>
-                              <h4 className="text-2xl font-bold">{groupName}</h4>
+                              <h4 className="text-2xl font-bold flex items-center gap-2">
+                                {groupName}
+                                <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                                  {isGroupCollapsed(groupName) ? 'Click to expand' : 'Click to collapse'}
+                                </Badge>
+                              </h4>
                               <p className="text-white/80 font-medium">
                                 {members.length} members in this group
                               </p>
@@ -277,8 +302,9 @@ export const GroupableDataTable = ({
                       </div>
                     )}
 
-                    {/* Data Table */}
-                    <div className="relative overflow-hidden rounded-2xl border-2 border-slate-200 bg-white shadow-xl">
+                    {/* Data Table - Now Collapsible */}
+                    {!isGroupCollapsed(groupName) && (
+                    <div className="relative overflow-hidden rounded-2xl border-2 border-slate-200 bg-white shadow-xl animate-in slide-in-from-top-2 duration-300">
                       <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 via-transparent to-purple-50/30"></div>
                       <Table>
                         <TableHeader>
@@ -336,6 +362,7 @@ export const GroupableDataTable = ({
                               </Button>
                             </TableHead>
                             <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 min-w-[150px]">Current Usage</TableHead>
+                            <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 min-w-[150px]">Comments & Notes</TableHead>
                           </TableRow>
                         </TableHeader>
                         
@@ -441,12 +468,44 @@ export const GroupableDataTable = ({
                                     {member.currentUsage || '-'}
                                   </span>
                                 </TableCell>
+                                
+                                <TableCell className="px-6 py-6">
+                                  <div className="flex flex-col gap-2">
+                                    {member.tags && member.tags.length > 0 && (
+                                      <div className="flex flex-wrap gap-1">
+                                        {member.tags.slice(0, 2).map((tag, index) => (
+                                          <Badge 
+                                            key={index} 
+                                            variant="outline" 
+                                            className="text-xs bg-blue-50 text-blue-700 border-blue-200 px-2 py-1"
+                                          >
+                                            {tag}
+                                          </Badge>
+                                        ))}
+                                        {member.tags.length > 2 && (
+                                          <Badge variant="outline" className="text-xs bg-slate-50 text-slate-600 border-slate-200 px-2 py-1">
+                                            +{member.tags.length - 2}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    )}
+                                    {(member.comments || member.notes) && (
+                                      <div className="text-xs text-slate-600 truncate max-w-[120px]">
+                                        {member.comments || member.notes}
+                                      </div>
+                                    )}
+                                    {!member.tags?.length && !member.comments && !member.notes && (
+                                      <span className="text-xs text-slate-400 italic">No annotations</span>
+                                    )}
+                                  </div>
+                                </TableCell>
                               </TableRow>
                             );
                           })}
                         </TableBody>
                       </Table>
                     </div>
+                    )}
                   </div>
                 );
               })}

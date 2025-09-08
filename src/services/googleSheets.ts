@@ -73,7 +73,7 @@ class GoogleSheetsService {
   async fetchAnnotations(): Promise<any[][]> {
     try {
       const accessToken = await this.getAccessToken();
-      const range = `${this.annotationsSheetName}!A:F`;
+      const range = `${this.annotationsSheetName}!A:G`; // Extended to include Unique ID column
       
       const response = await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}/values/${range}`,
@@ -87,14 +87,14 @@ class GoogleSheetsService {
       if (!response.ok) {
         // If sheet doesn't exist, create it
         await this.createAnnotationsSheet();
-        return [['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Last Updated']];
+        return [['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Last Updated', 'Unique ID']];
       }
 
       const data = await response.json();
       return data.values || [];
     } catch (error) {
       console.error('Error fetching annotations:', error);
-      return [['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Last Updated']];
+      return [['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Last Updated', 'Unique ID']];
     }
   }
 
@@ -128,7 +128,7 @@ class GoogleSheetsService {
 
       // Add headers
       await this.updateAnnotations([
-        ['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Last Updated']
+        ['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Last Updated', 'Unique ID']
       ]);
     } catch (error) {
       console.error('Error creating annotations sheet:', error);
@@ -138,7 +138,7 @@ class GoogleSheetsService {
   async updateAnnotations(values: any[][]): Promise<void> {
     try {
       const accessToken = await this.getAccessToken();
-      const range = `${this.annotationsSheetName}!A:F`;
+      const range = `${this.annotationsSheetName}!A:G`; // Extended to include Unique ID column
       
       const response = await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}/values/${range}?valueInputOption=RAW`,
@@ -163,14 +163,17 @@ class GoogleSheetsService {
     }
   }
 
-  async saveAnnotation(memberId: string, email: string, comments: string, notes: string, tags: string[]): Promise<void> {
+  async saveAnnotation(memberId: string, email: string, comments: string, notes: string, tags: string[], uniqueId?: string): Promise<void> {
     try {
       const annotationsData = await this.fetchAnnotations();
-      const existingIndex = annotationsData.findIndex(row => row[0] === memberId);
+      // Try to find by uniqueId first, then by memberId for backward compatibility
+      const existingIndex = annotationsData.findIndex(row => 
+        (uniqueId && row[6] === uniqueId) || row[0] === memberId
+      );
       const timestamp = new Date().toISOString();
       const tagsString = tags.join(', ');
       
-      const newRow = [memberId, email, comments, notes, tagsString, timestamp];
+      const newRow = [memberId, email, comments, notes, tagsString, timestamp, uniqueId || ''];
       
       if (existingIndex >= 0) {
         // Update existing row
@@ -200,21 +203,32 @@ class GoogleSheetsService {
       const [headers, ...rows] = rawData;
       const [annotationHeaders, ...annotationRows] = annotationsData;
       
-      // Create a map of annotations by member ID
+      // Create a map of annotations by both member ID and unique ID for better matching
       const annotationsMap = new Map();
       annotationRows.forEach(row => {
         if (row[0]) { // if member ID exists
-          annotationsMap.set(row[0], {
+          const annotation = {
             comments: row[2] || '',
             notes: row[3] || '',
             tags: row[4] ? row[4].split(', ').filter(tag => tag.trim()) : []
-          });
+          };
+          
+          // Map by member ID (for backward compatibility)
+          annotationsMap.set(row[0], annotation);
+          
+          // Also map by unique ID if available (for better precision)
+          if (row[6]) {
+            annotationsMap.set(row[6], annotation);
+          }
         }
       });
       
       return rows.map(row => {
         const memberId = row[1] || '';
-        const annotations = annotationsMap.get(memberId) || { comments: '', notes: '', tags: [] };
+        const uniqueId = row[0] || '';
+        
+        // Try to get annotation by unique ID first, then by member ID
+        const annotations = annotationsMap.get(uniqueId) || annotationsMap.get(memberId) || { comments: '', notes: '', tags: [] };
         
         // Map to new data structure:
         // Unique Id, Member ID, First Name, Last Name, Email, Membership Name, End Date, Home Location, Current Usage, Id, Order At, Sold By, Membership Id, Frozen, Paid, Status

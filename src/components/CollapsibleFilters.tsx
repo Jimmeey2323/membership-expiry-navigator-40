@@ -184,21 +184,22 @@ export const CollapsibleFilters = ({
       icon: Users,
       filters: [
         { key: 'active', label: 'Active Members', count: activeMembers.length, icon: UserCheck, color: 'bg-green-100 text-green-800 border-green-200' },
-        { key: 'expired', label: 'Expired Members', count: expiredMembers.length, icon: UserX, color: 'bg-red-100 text-red-800 border-red-200' },
-        { key: 'frozen', label: 'Frozen Accounts', count: frozenMembers.length, icon: Clock, color: 'bg-blue-100 text-blue-800 border-blue-200' },
+        { key: 'churned', label: 'Churned Members', count: membershipData.filter(m => m.status === 'Churned').length, icon: UserX, color: 'bg-red-100 text-red-800 border-red-200' },
+        { key: 'frozen', label: 'Frozen Members', count: membershipData.filter(m => m.status === 'Frozen').length, icon: Clock, color: 'bg-blue-100 text-blue-800 border-blue-200' },
         { key: 'sessions', label: 'With Sessions', count: membersWithSessions.length, icon: Dumbbell, color: 'bg-purple-100 text-purple-800 border-purple-200' },
         { key: 'no-sessions', label: 'No Sessions Left', count: membershipData.length - membersWithSessions.length, icon: AlertCircle, color: 'bg-yellow-100 text-yellow-800 border-yellow-200' }
       ]
     },
     {
-      title: "Date Filters",
+      title: "End Date Filters",
       category: "dateFilters" as keyof MultiFilter,
       icon: Calendar,
       filters: [
         { key: 'recent', label: 'Joined Last 30 Days', count: recentMembers.length, icon: TrendingUp, color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
         { key: 'weekly', label: 'Joined This Week', count: weeklyMembers.length, icon: Calendar, color: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
         { key: 'expiring-week', label: 'Expiring This Week', count: expiringThisWeek.length, icon: AlertCircle, color: 'bg-orange-100 text-orange-800 border-orange-200' },
-        { key: 'expiring-month', label: 'Expiring This Month', count: expiringThisMonth.length, icon: Clock, color: 'bg-amber-100 text-amber-800 border-amber-200' }
+        { key: 'expiring-month', label: 'Expiring This Month', count: expiringThisMonth.length, icon: Clock, color: 'bg-amber-100 text-amber-800 border-amber-200' },
+        { key: 'expired', label: 'Already Expired', count: membershipData.filter(m => parseDate(m.endDate) < now).length, icon: UserX, color: 'bg-red-100 text-red-800 border-red-200' }
       ]
     },
     {
@@ -212,27 +213,41 @@ export const CollapsibleFilters = ({
       ]
     },
     {
-      title: "Location Filters",
+      title: "Home Location Filters",
       category: "locations" as keyof MultiFilter,
       icon: MapPin,
-      filters: availableLocations.map(location => ({
+      filters: availableLocations.map((location, index) => ({
         key: location,
         label: location.split(',')[0] || location,
         count: membershipData.filter(member => member.location === location).length,
         icon: MapPin,
-        color: 'bg-teal-100 text-teal-800 border-teal-200'
+        color: [
+          'bg-teal-100 text-teal-800 border-teal-200',
+          'bg-emerald-100 text-emerald-800 border-emerald-200', 
+          'bg-cyan-100 text-cyan-800 border-cyan-200',
+          'bg-green-100 text-green-800 border-green-200'
+        ][index % 4]
       }))
     },
     {
       title: "Membership Type Filters",
       category: "membershipTypes" as keyof MultiFilter,
       icon: BookOpen,
-      filters: availableMembershipTypes.slice(0, 6).map(type => ({
+      filters: availableMembershipTypes.slice(0, 8).map((type, index) => ({
         key: type,
-        label: type,
+        label: type.length > 25 ? type.substring(0, 25) + '...' : type,
         count: membershipData.filter(member => member.membershipName === type).length,
         icon: BookOpen,
-        color: 'bg-violet-100 text-violet-800 border-violet-200'
+        color: [
+          'bg-violet-100 text-violet-800 border-violet-200',
+          'bg-purple-100 text-purple-800 border-purple-200',
+          'bg-indigo-100 text-indigo-800 border-indigo-200',
+          'bg-blue-100 text-blue-800 border-blue-200',
+          'bg-sky-100 text-sky-800 border-sky-200',
+          'bg-cyan-100 text-cyan-800 border-cyan-200',
+          'bg-teal-100 text-teal-800 border-teal-200',
+          'bg-emerald-100 text-emerald-800 border-emerald-200'
+        ][index % 8]
       }))
     },
     {

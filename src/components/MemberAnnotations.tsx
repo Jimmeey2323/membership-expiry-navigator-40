@@ -46,7 +46,8 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
         member.email,
         comments,
         notes,
-        tags
+        tags,
+        member.uniqueId // Pass unique ID for better tracking
       );
       
       onSave(member.memberId, comments, notes, tags);
