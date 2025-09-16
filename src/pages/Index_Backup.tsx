@@ -37,52 +37,40 @@ import { toast } from "sonner";
 const Index = () => {
   const [localMembershipData, setLocalMembershipData] = useState<MembershipData[]>([]);
   const [followUps, setFollowUps] = useState<FollowUpEntry[]>([]);
-  const [filterState, setFilterState] = useState({
+  const [filterState, setFilterState] = useState<FilterState>({
     search: '',
-    status: [] as string[],
-    location: [] as string[],
-    membershipType: [] as string[],
-    expiryRange: '',
-    sessionsRange: '',
-    hasAnnotations: false
+    status: '',
+    location: '',
+    membershipType: '',
+    expiryDateFrom: '',
+    expiryDateTo: '',
+    sessionsFrom: '',
+    sessionsTo: ''
   });
   const [selectedMember, setSelectedMember] = useState<MembershipData | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
 
-  const { data: membershipData, refetch, isLoading, error } = useQuery({
-    queryKey: ["membershipData"],
+  const { data: membershipData = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['membershipData'],
     queryFn: () => googleSheetsService.getMembershipData(),
-    refetchInterval: 30000,
-    refetchOnWindowFocus: true,
+    refetchInterval: 300000,
   });
 
   useEffect(() => {
     if (membershipData) {
-      setLocalMembershipData(membershipData as MembershipData[]);
+      setLocalMembershipData(membershipData);
     }
   }, [membershipData]);
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6 flex items-center justify-center">
-        <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl max-w-md">
-          <CardHeader>
-            <CardTitle className="text-red-600">Connection Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-slate-600 mb-4">Unable to fetch membership data. Please check your connection and try again.</p>
-            <Button onClick={() => refetch()} className="w-full">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Retry
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (error) {
+      toast.error("Failed to fetch membership data. Using sample data for demonstration.");
+    }
+  }, [error]);
 
-  const handleAnnotationUpdate = (memberId: string, comments: string, notes: string, tags: string[]) => {
+    const handleAnnotationUpdate = (memberId: string, comments: string, notes: string, tags: string[]) => {
     setLocalMembershipData(prev => 
       prev.map(member => 
         member.memberId === memberId ? { ...member, comments, notes, tags } : member
@@ -92,7 +80,7 @@ const Index = () => {
 
   const handleAddMember = (newMember: MembershipData) => {
     setLocalMembershipData(prev => [...prev, newMember]);
-    toast.success('Member added successfully!');
+    setShowAddModal(false);
   };
 
   const handleUpdateMember = (updatedMember: MembershipData) => {
@@ -110,7 +98,7 @@ const Index = () => {
     setShowFollowUpModal(false);
   };
 
-  const handleFilterChange = (newFilters: any) => {
+  const handleFilterChange = (newFilters: FilterState) => {
     setFilterState(newFilters);
   };
 
@@ -122,19 +110,20 @@ const Index = () => {
           !member.email.toLowerCase().includes(filterState.search.toLowerCase())) {
         return false;
       }
-      if (filterState.status.length > 0 && !filterState.status.includes(member.status)) return false;
-      if (filterState.location.length > 0 && !filterState.location.includes(member.location)) return false;
-      if (filterState.membershipType.length > 0 && !filterState.membershipType.includes(member.membershipName)) return false;
+      if (filterState.status && member.status !== filterState.status) return false;
+      if (filterState.location && member.location !== filterState.location) return false;
+      if (filterState.membershipType && member.membershipName !== filterState.membershipType) return false;
       return true;
     });
   };
 
   const filteredData = getFilteredData();
+
+  // Calculate metrics
   const totalMembers = localMembershipData.length;
   const activeMembers = localMembershipData.filter(member => member.status === 'Active');
   const churnedMembers = localMembershipData.filter(member => member.status === 'Churned');
   const expiringMembers = localMembershipData.filter(member => {
-    if (!member.endDate) return false;
     const endDate = new Date(member.endDate);
     const now = new Date();
     const daysUntilExpiry = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
@@ -146,11 +135,14 @@ const Index = () => {
     (member.tags && member.tags.length > 0)
   );
 
-  const quickActions = [
+  const totalSessions = localMembershipData.reduce((sum, member) => sum + (member.sessionsLeft || 0), 0);
+  const totalRevenue = localMembershipData.reduce((sum, member) => sum + parseFloat(member.paid || '0'), 0);
+
+    const quickActions = [
     { 
       name: 'Add Member', 
       icon: Plus, 
-      action: () => {}, // Will be handled by modal trigger
+      action: () => setShowAddModal(true),
       color: 'bg-blue-500 hover:bg-blue-600'
     },
     { 
@@ -187,29 +179,32 @@ const Index = () => {
     }
   ];
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6 space-y-6">
-      {/* Filter Section - Now at the top */}
-      <TopFilterSection 
-        filters={filterState}
-        onFiltersChange={handleFilterChange}
-        data={localMembershipData}
-      />
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-slate-600">Loading membership data...</p>
+        </div>
+      </div>
+    );
+  }
 
-      {/* Dashboard Header */}
+  return (
+    <div className="space-y-8">
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Membership Dashboard</h1>
-          <p className="text-slate-600 mt-1">Monitor and manage your membership data with advanced analytics</p>
+          <h1 className="text-3xl font-bold text-slate-900">Member Dashboard</h1>
+          <p className="text-slate-600 mt-1">Comprehensive membership management and analytics</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button 
-            onClick={() => refetch()}
-            disabled={isLoading}
-            variant="outline"
-            className="backdrop-blur-sm bg-white/70 border-white/30 hover:bg-white/90"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          <Badge variant="outline" className="text-green-600 border-green-600">
+            <Activity className="h-3 w-3 mr-1" />
+            Live Data
+          </Badge>
+          <Button onClick={() => refetch()} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
         </div>
@@ -217,7 +212,7 @@ const Index = () => {
 
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium text-blue-700">Total Members</CardTitle>
@@ -233,7 +228,7 @@ const Index = () => {
           </CardContent>
         </Card>
 
-        <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl">
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium text-green-700">Active Members</CardTitle>
@@ -249,7 +244,7 @@ const Index = () => {
           </CardContent>
         </Card>
 
-        <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl">
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium text-orange-700">Expiring Soon</CardTitle>
@@ -265,25 +260,25 @@ const Index = () => {
           </CardContent>
         </Card>
 
-        <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl">
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-red-700">Churned</CardTitle>
-              <UserX className="h-5 w-5 text-red-600" />
+              <CardTitle className="text-sm font-medium text-purple-700">Revenue</CardTitle>
+              <Crown className="h-5 w-5 text-purple-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-900">{churnedMembers.length.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-purple-900">${totalRevenue.toLocaleString()}</div>
             <div className="flex items-center mt-2">
-              <TrendingDown className="h-4 w-4 text-red-600 mr-1" />
-              <span className="text-sm text-red-600">-3% from last month</span>
+              <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
+              <span className="text-sm text-green-600">+18% from last month</span>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Quick Actions */}
-      <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5" />
@@ -297,32 +292,12 @@ const Index = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {quickActions.map((action) => {
               const Icon = action.icon;
-              
-              // Special handling for Add Member button
-              if (action.name === 'Add Member') {
-                return (
-                  <AddMemberModal
-                    key={action.name}
-                    onAddMember={handleAddMember}
-                    trigger={
-                      <Button
-                        variant="outline"
-                        className="h-20 flex flex-col items-center gap-2 hover:scale-105 transition-all duration-200 backdrop-blur-sm bg-white/60 border-white/40 hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-600 hover:text-white hover:border-transparent"
-                      >
-                        <Icon className="h-6 w-6" />
-                        <span className="text-sm font-medium">{action.name}</span>
-                      </Button>
-                    }
-                  />
-                );
-              }
-              
               return (
                 <Button
                   key={action.name}
                   onClick={action.action}
                   variant="outline"
-                  className="h-20 flex flex-col items-center gap-2 hover:scale-105 transition-all duration-200 backdrop-blur-sm bg-white/60 border-white/40 hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-600 hover:text-white hover:border-transparent"
+                  className={`h-20 flex flex-col items-center gap-2 hover:scale-105 transition-transform ${action.color} hover:text-white border-2`}
                 >
                   <Icon className="h-6 w-6" />
                   <span className="text-sm font-medium">{action.name}</span>
@@ -336,27 +311,27 @@ const Index = () => {
       {/* Main Content Tabs */}
       <Tabs defaultValue="members" className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <TabsList className="grid w-full sm:w-auto grid-cols-3 backdrop-blur-xl bg-white/80 border-white/20">
-            <TabsTrigger value="members" className="flex items-center gap-2 data-[state=active]:bg-white/90">
+          <TabsList className="grid w-full sm:w-auto grid-cols-3">
+            <TabsTrigger value="members" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Members
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center gap-2 data-[state=active]:bg-white/90">
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Analytics
             </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center gap-2 data-[state=active]:bg-white/90">
+            <TabsTrigger value="reports" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Reports
             </TabsTrigger>
           </TabsList>
           
           <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="flex items-center gap-1 backdrop-blur-sm bg-white/70">
+            <Badge variant="secondary" className="flex items-center gap-1">
               <MessageSquare className="h-3 w-3" />
               {withAnnotations.length} with notes
             </Badge>
-            <Badge variant="outline" className="flex items-center gap-1 backdrop-blur-sm bg-white/70">
+            <Badge variant="outline" className="flex items-center gap-1">
               <AlertTriangle className="h-3 w-3" />
               {churnedMembers.length} churned
             </Badge>
@@ -365,26 +340,18 @@ const Index = () => {
 
         <TabsContent value="members" className="space-y-6">
           <EnhancedDataTable
-            data={filteredData}
+            data={localMembershipData}
             title="Member Management"
             onAnnotationUpdate={handleAnnotationUpdate}
-            onEditMember={(member) => {
-              setSelectedMember(member);
-              setShowEditModal(true);
-            }}
-            onFollowUpMember={(member) => {
-              setSelectedMember(member);
-              setShowFollowUpModal(true);
-            }}
           />
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-6">
-          <PremiumCharts data={filteredData} />
+          <PremiumCharts data={localMembershipData} />
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-6">
-          <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl">
+          <Card>
             <CardHeader>
               <CardTitle>Reports & Insights</CardTitle>
               <CardDescription>
@@ -401,27 +368,6 @@ const Index = () => {
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Modals */}
-      {selectedMember && (
-        <>
-          <EditMemberModal
-            member={selectedMember}
-            open={showEditModal}
-            onOpenChange={setShowEditModal}
-            onUpdateMember={handleUpdateMember}
-          />
-          
-          <FollowUpModal
-            memberId={selectedMember.memberId}
-            memberName={`${selectedMember.firstName} ${selectedMember.lastName}`}
-            open={showFollowUpModal}
-            onOpenChange={setShowFollowUpModal}
-            onAddFollowUp={handleAddFollowUp}
-            existingFollowUps={followUps.filter(f => f.memberId === selectedMember.memberId)}
-          />
-        </>
-      )}
     </div>
   );
 };

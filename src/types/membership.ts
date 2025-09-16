@@ -46,3 +46,14 @@ export interface FilterOptions {
     max: number;
   };
 }
+
+export interface FilterState {
+  search: string;
+  status: string;
+  location: string;
+  membershipType: string;
+  expiryDateFrom: string;
+  expiryDateTo: string;
+  sessionsFrom: string;
+  sessionsTo: string;
+}

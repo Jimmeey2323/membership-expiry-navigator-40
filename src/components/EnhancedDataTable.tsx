@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ChevronDown, ChevronUp, Search, ArrowUpDown, Eye, Calendar, Activity, MapPin, User, Crown, Zap } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, ArrowUpDown, Eye, Calendar, Activity, MapPin, User, Crown, Zap, Edit, MessageSquare } from "lucide-react";
 import { MembershipData } from "@/types/membership";
 import { MemberDetailModal } from "./MemberDetailModal";
 
@@ -15,6 +15,8 @@ interface EnhancedDataTableProps {
   title: string;
   className?: string;
   onAnnotationUpdate?: (memberId: string, comments: string, notes: string, tags: string[]) => void;
+  onEditMember?: (member: MembershipData) => void;
+  onFollowUpMember?: (member: MembershipData) => void;
 }
 
 type SortField = keyof MembershipData;
@@ -24,7 +26,9 @@ export const EnhancedDataTable = ({
   data,
   title,
   className = '',
-  onAnnotationUpdate
+  onAnnotationUpdate,
+  onEditMember,
+  onFollowUpMember
 }: EnhancedDataTableProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<SortField>('endDate');
@@ -231,6 +235,8 @@ export const EnhancedDataTable = ({
                     </TableHead>
                     
                     <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 min-w-[150px]">Tags & Notes</TableHead>
+                    
+                    <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 min-w-[120px] text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 
@@ -369,6 +375,37 @@ export const EnhancedDataTable = ({
                                 <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                                 <span className="text-xs text-slate-500">Has notes</span>
                               </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        
+                        <TableCell className="px-6 py-6">
+                          <div className="flex items-center justify-center gap-2">
+                            {onEditMember && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEditMember(member);
+                                }}
+                                className="backdrop-blur-sm bg-white/80 hover:bg-blue-50 border-blue-200 text-blue-700 hover:text-blue-800"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {onFollowUpMember && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onFollowUpMember(member);
+                                }}
+                                className="backdrop-blur-sm bg-white/80 hover:bg-purple-50 border-purple-200 text-purple-700 hover:text-purple-800"
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                              </Button>
                             )}
                           </div>
                         </TableCell>
