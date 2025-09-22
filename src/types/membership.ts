@@ -24,6 +24,30 @@ export interface MembershipData {
   sessionsLeft?: number;
 }
 
+export interface Comment {
+  id: string;
+  text: string;
+  timestamp: Date;
+  associate: string;
+  type: 'comment';
+}
+
+export interface Note {
+  id: string;
+  text: string;
+  timestamp: Date;
+  associate: string;
+  type: 'note';
+}
+
+export interface Tag {
+  id: string;
+  text: string;
+  timestamp: Date;
+  associate: string;
+  color?: string;
+}
+
 export interface MemberAnnotation {
   memberId: string;
   email: string;
