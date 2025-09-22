@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,95 +57,19 @@ const STAFF_NAMES = [
 ];
 
 export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDetailModalProps) => {
-  const [comments, setComments] = useState<Comment[]>(() => {
-    if (member?.comments) {
-      return member.comments.split('\n---\n').map((text, index) => {
-        // Parse enhanced format
-        const lines = text.trim().split('\n');
-        let actualText = '';
-        let createdBy = 'Unknown';
-        let lastEditedBy = '';
-        let timestamp = new Date();
-        let lastEditedAt: Date | undefined;
-
-        for (const line of lines) {
-          if (line.startsWith('[Created by:')) {
-            const match = line.match(/\[Created by: (.+?) at (.+?)\]/);
-            if (match) {
-              createdBy = match[1];
-              timestamp = new Date(match[2]);
-            }
-          } else if (line.startsWith('[Last edited by:')) {
-            const match = line.match(/\[Last edited by: (.+?) at (.+?)\]/);
-            if (match) {
-              lastEditedBy = match[1];
-              lastEditedAt = new Date(match[2]);
-            }
-          } else if (!line.startsWith('[')) {
-            actualText += (actualText ? '\n' : '') + line;
-          }
-        }
-
-        const comment = {
-          id: (index + 1).toString(),
-          text: actualText,
-          timestamp,
-          type: 'comment' as const,
-          createdBy,
-          lastEditedBy: lastEditedBy || undefined,
-          lastEditedAt
-        };
-        return comment;
-      }).filter(c => c.text);
-    }
-    return [];
-  });
+  // Debug logging to understand the data flow
+  console.log('=== MemberDetailModal Debug ===');
+  console.log('Modal isOpen:', isOpen);
+  console.log('Member data received:', member);
+  if (member) {
+    console.log('Member comments raw:', member.comments);
+    console.log('Member notes raw:', member.notes);
+    console.log('Member tags raw:', member.tags);
+  }
   
-  const [notes, setNotes] = useState<Comment[]>(() => {
-    if (member?.notes) {
-      return member.notes.split('\n---\n').map((text, index) => {
-        // Parse enhanced format
-        const lines = text.trim().split('\n');
-        let actualText = '';
-        let createdBy = 'Unknown';
-        let lastEditedBy = '';
-        let timestamp = new Date();
-        let lastEditedAt: Date | undefined;
-
-        for (const line of lines) {
-          if (line.startsWith('[Created by:')) {
-            const match = line.match(/\[Created by: (.+?) at (.+?)\]/);
-            if (match) {
-              createdBy = match[1];
-              timestamp = new Date(match[2]);
-            }
-          } else if (line.startsWith('[Last edited by:')) {
-            const match = line.match(/\[Last edited by: (.+?) at (.+?)\]/);
-            if (match) {
-              lastEditedBy = match[1];
-              lastEditedAt = new Date(match[2]);
-            }
-          } else if (!line.startsWith('[')) {
-            actualText += (actualText ? '\n' : '') + line;
-          }
-        }
-
-        const note = {
-          id: (index + 1).toString(),
-          text: actualText,
-          timestamp,
-          type: 'note' as const,
-          createdBy,
-          lastEditedBy: lastEditedBy || undefined,
-          lastEditedAt
-        };
-        return note;
-      }).filter(n => n.text);
-    }
-    return [];
-  });
-  
-  const [tags, setTags] = useState<string[]>(member?.tags || []);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [notes, setNotes] = useState<Comment[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
   const [newComment, setNewComment] = useState('');
   const [newNote, setNewNote] = useState('');
   const [newTag, setNewTag] = useState('');
@@ -155,6 +79,118 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
   const [editText, setEditText] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Parse comments function
+  const parseComments = (commentsString: string): Comment[] => {
+    if (!commentsString) return [];
+    
+    console.log('Parsing comments string:', commentsString);
+    return commentsString.split('\n---\n').map((text, index) => {
+      const lines = text.trim().split('\n');
+      let actualText = '';
+      let createdBy = 'Unknown';
+      let lastEditedBy = '';
+      let timestamp = new Date();
+      let lastEditedAt: Date | undefined;
+
+      for (const line of lines) {
+        if (line.startsWith('[Created by:')) {
+          const match = line.match(/\[Created by: (.+?) at (.+?)\]/);
+          if (match) {
+            createdBy = match[1];
+            timestamp = new Date(match[2]);
+          }
+        } else if (line.startsWith('[Last edited by:')) {
+          const match = line.match(/\[Last edited by: (.+?) at (.+?)\]/);
+          if (match) {
+            lastEditedBy = match[1];
+            lastEditedAt = new Date(match[2]);
+          }
+        } else if (!line.startsWith('[')) {
+          actualText += (actualText ? '\n' : '') + line;
+        }
+      }
+
+      const comment = {
+        id: (index + 1).toString(),
+        text: actualText,
+        timestamp,
+        type: 'comment' as const,
+        createdBy,
+        lastEditedBy: lastEditedBy || undefined,
+        lastEditedAt
+      };
+      console.log('Processed comment:', comment);
+      return comment;
+    }).filter(c => c.text);
+  };
+
+  // Parse notes function
+  const parseNotes = (notesString: string): Comment[] => {
+    if (!notesString) return [];
+    
+    console.log('Parsing notes string:', notesString);
+    return notesString.split('\n---\n').map((text, index) => {
+      const lines = text.trim().split('\n');
+      let actualText = '';
+      let createdBy = 'Unknown';
+      let lastEditedBy = '';
+      let timestamp = new Date();
+      let lastEditedAt: Date | undefined;
+
+      for (const line of lines) {
+        if (line.startsWith('[Created by:')) {
+          const match = line.match(/\[Created by: (.+?) at (.+?)\]/);
+          if (match) {
+            createdBy = match[1];
+            timestamp = new Date(match[2]);
+          }
+        } else if (line.startsWith('[Last edited by:')) {
+          const match = line.match(/\[Last edited by: (.+?) at (.+?)\]/);
+          if (match) {
+            lastEditedBy = match[1];
+            lastEditedAt = new Date(match[2]);
+          }
+        } else if (!line.startsWith('[')) {
+          actualText += (actualText ? '\n' : '') + line;
+        }
+      }
+
+      const note = {
+        id: (index + 1).toString(),
+        text: actualText,
+        timestamp,
+        type: 'note' as const,
+        createdBy,
+        lastEditedBy: lastEditedBy || undefined,
+        lastEditedAt
+      };
+      console.log('Processed note:', note);
+      return note;
+    }).filter(n => n.text);
+  };
+
+  // Update state when member changes
+  useEffect(() => {
+    console.log('useEffect triggered - member changed:', member);
+    if (member) {
+      const parsedComments = parseComments(member.comments || '');
+      const parsedNotes = parseNotes(member.notes || '');
+      
+      console.log('Setting comments:', parsedComments);
+      console.log('Setting notes:', parsedNotes);
+      console.log('Setting tags:', member.tags || []);
+      
+      setComments(parsedComments);
+      setNotes(parsedNotes);
+      setTags(member.tags || []);
+    } else {
+      console.log('No member - clearing all data');
+      setComments([]);
+      setNotes([]);
+      setTags([]);
+    }
+  }, [member]);
 
   const getDaysUntilExpiry = (endDate: string) => {
     const today = new Date();
