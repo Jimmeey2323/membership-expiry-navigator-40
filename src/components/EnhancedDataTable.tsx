@@ -73,10 +73,10 @@ export const EnhancedDataTable = ({
   };
 
   const getSortIcon = (field: SortField) => {
-    if (field !== sortField) return <ArrowUpDown className="h-4 w-4 text-slate-400" />;
+    if (field !== sortField) return <ArrowUpDown className="h-4 w-4 text-gray-400" />;
     return sortDirection === 'asc' 
-      ? <ChevronUp className="h-4 w-4 text-blue-600" /> 
-      : <ChevronDown className="h-4 w-4 text-blue-600" />;
+      ? <ChevronUp className="h-4 w-4 text-white" /> 
+      : <ChevronDown className="h-4 w-4 text-white" />;
   };
 
   const handleRowClick = (member: MembershipData) => {
@@ -104,7 +104,7 @@ export const EnhancedDataTable = ({
       return <Crown className="h-4 w-4 text-yellow-600" />;
     }
     if (membershipName?.toLowerCase().includes('basic')) {
-      return <User className="h-4 w-4 text-slate-600" />;
+      return <User className="h-4 w-4 text-gray-600" />;
     }
     return <Zap className="h-4 w-4 text-blue-600" />;
   };
@@ -112,22 +112,22 @@ export const EnhancedDataTable = ({
   return (
     <>
       <TooltipProvider>
-        <Card className={`premium-card shadow-2xl border-2 border-slate-200/80 bg-gradient-to-br from-white via-slate-50/30 to-white backdrop-blur-sm ${className}`}>
+        <Card className={`premium-card shadow-2xl border border-gray-200 bg-white ${className}`}>
           <div className="p-8">
             {/* Enhanced Header */}
-            <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
+            <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-200">
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur-lg opacity-30 animate-pulse"></div>
-                  <div className="relative p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl shadow-xl">
+                  <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-gray-700 rounded-2xl blur-lg opacity-30 animate-pulse"></div>
+                  <div className="relative p-4 bg-gradient-to-r from-gray-800 to-gray-700 text-white rounded-2xl shadow-xl">
                     <Activity className="h-6 w-6" />
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-3xl font-bold text-slate-900 bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                  <h3 className="text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-700 bg-clip-text text-transparent">
                     {title}
                   </h3>
-                  <p className="text-slate-600 font-medium mt-1">
+                  <p className="text-gray-600 font-medium mt-1">
                     Comprehensive member management
                   </p>
                 </div>
@@ -135,21 +135,21 @@ export const EnhancedDataTable = ({
               
               <div className="flex items-center gap-6">
                 <div className="relative">
-                  <div className="absolute inset-0 bg-blue-500/20 rounded-xl blur-sm"></div>
+                  <div className="absolute inset-0 bg-gray-500/20 rounded-xl blur-sm"></div>
                   <div className="relative">
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5 z-10" />
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 z-10" />
                     <Input
                       placeholder="Search members..."
                       value={searchTerm}
                       onChange={e => setSearchTerm(e.target.value)}
-                      className="pl-12 pr-4 py-3 bg-white/80 backdrop-blur-sm border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 rounded-xl w-80 transition-all duration-300 shadow-lg"
+                      className="pl-12 pr-4 py-3 bg-white border-gray-300 focus:border-gray-500 focus:ring-4 focus:ring-gray-100 rounded-xl w-80 transition-all duration-300 shadow-lg"
                     />
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge 
                     variant="secondary" 
-                    className="bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 px-6 py-3 text-base font-bold border border-blue-200 shadow-md"
+                    className="bg-gradient-to-r from-gray-800 to-gray-700 text-white px-6 py-3 text-base font-bold border border-gray-600 shadow-md"
                   >
                     <Activity className="h-4 w-4 mr-2" />
                     {filteredAndSortedData.length} members
@@ -159,15 +159,15 @@ export const EnhancedDataTable = ({
             </div>
 
             {/* Enhanced Table */}
-            <div className="relative overflow-hidden rounded-2xl border-2 border-slate-200 bg-white shadow-xl">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 via-transparent to-purple-50/30"></div>
+            <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+              <div className="absolute inset-0 bg-gradient-to-r from-gray-50/30 via-transparent to-gray-50/30"></div>
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 border-b-2 border-slate-200 hover:bg-gradient-to-r hover:from-slate-200 hover:via-slate-100 hover:to-slate-200 transition-all duration-300">
-                    <TableHead className="text-slate-800 font-bold text-sm h-16 px-6">
+                  <TableRow className="bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 border-b border-gray-600 hover:bg-gradient-to-r hover:from-gray-700 hover:via-gray-600 hover:to-gray-700 transition-all duration-300">
+                    <TableHead className="text-white font-bold text-sm h-16 px-6">
                       <Button 
                         variant="ghost" 
-                        className="h-auto p-0 font-bold text-slate-800 hover:text-blue-600 hover:bg-transparent transition-colors"
+                        className="h-auto p-0 font-bold text-white hover:text-gray-200 hover:bg-transparent transition-colors"
                         onClick={() => handleSort('memberId')}
                       >
                         <User className="h-4 w-4 mr-2" />
@@ -175,32 +175,32 @@ export const EnhancedDataTable = ({
                       </Button>
                     </TableHead>
                     
-                    <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 min-w-[200px]">
+                    <TableHead className="text-white font-bold text-sm h-16 px-6 min-w-[200px]">
                       <Button 
                         variant="ghost" 
-                        className="h-auto p-0 font-bold text-slate-800 hover:text-blue-600 hover:bg-transparent"
+                        className="h-auto p-0 font-bold text-white hover:text-gray-200 hover:bg-transparent"
                         onClick={() => handleSort('firstName')}
                       >
                         Member Name {getSortIcon('firstName')}
                       </Button>
                     </TableHead>
                     
-                    <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 min-w-[250px]">Email Address</TableHead>
+                    <TableHead className="text-white font-bold text-sm h-16 px-6 min-w-[250px]">Email Address</TableHead>
                     
-                    <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 min-w-[280px]">
+                    <TableHead className="text-white font-bold text-sm h-16 px-6 min-w-[280px]">
                       <Button 
                         variant="ghost" 
-                        className="h-auto p-0 font-bold text-slate-800 hover:text-blue-600 hover:bg-transparent"
+                        className="h-auto p-0 font-bold text-white hover:text-gray-200 hover:bg-transparent"
                         onClick={() => handleSort('membershipName')}
                       >
                         Membership Type {getSortIcon('membershipName')}
                       </Button>
                     </TableHead>
                     
-                    <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 min-w-[150px]">
+                    <TableHead className="text-white font-bold text-sm h-16 px-6 min-w-[150px]">
                       <Button 
                         variant="ghost" 
-                        className="h-auto p-0 font-bold text-slate-800 hover:text-blue-600 hover:bg-transparent"
+                        className="h-auto p-0 font-bold text-white hover:text-gray-200 hover:bg-transparent"
                         onClick={() => handleSort('endDate')}
                       >
                         <Calendar className="h-4 w-4 mr-2" />
@@ -208,15 +208,15 @@ export const EnhancedDataTable = ({
                       </Button>
                     </TableHead>
                     
-                    <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 min-w-[180px]">
+                    <TableHead className="text-white font-bold text-sm h-16 px-6 min-w-[180px]">
                       <MapPin className="h-4 w-4 mr-2 inline" />
                       Location
                     </TableHead>
                     
-                    <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 text-center min-w-[120px]">
+                    <TableHead className="text-white font-bold text-sm h-16 px-6 text-center min-w-[120px]">
                       <Button 
                         variant="ghost" 
-                        className="h-auto p-0 font-bold text-slate-800 hover:text-blue-600 hover:bg-transparent"
+                        className="h-auto p-0 font-bold text-white hover:text-gray-200 hover:bg-transparent"
                         onClick={() => handleSort('sessionsLeft')}
                       >
                         <Activity className="h-4 w-4 mr-2" />
@@ -224,19 +224,19 @@ export const EnhancedDataTable = ({
                       </Button>
                     </TableHead>
                     
-                    <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 text-center min-w-[120px]">
+                    <TableHead className="text-white font-bold text-sm h-16 px-6 text-center min-w-[120px]">
                       <Button 
                         variant="ghost" 
-                        className="h-auto p-0 font-bold text-slate-800 hover:text-blue-600 hover:bg-transparent"
+                        className="h-auto p-0 font-bold text-white hover:text-gray-200 hover:bg-transparent"
                         onClick={() => handleSort('status')}
                       >
                         Status {getSortIcon('status')}
                       </Button>
                     </TableHead>
                     
-                    <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 min-w-[150px]">Tags & Notes</TableHead>
+                    <TableHead className="text-white font-bold text-sm h-16 px-6 min-w-[150px]">Tags & Notes</TableHead>
                     
-                    <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 min-w-[120px] text-center">Actions</TableHead>
+                    <TableHead className="text-white font-bold text-sm h-16 px-6 min-w-[120px] text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 
@@ -249,36 +249,36 @@ export const EnhancedDataTable = ({
                     return (
                       <TableRow 
                         key={member.uniqueId}
-                        className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-blue-50/50 hover:via-white hover:to-purple-50/50 transition-all duration-300 cursor-pointer group h-20"
+                        className="border-b border-gray-100 hover:bg-gray-50 transition-all duration-300 cursor-pointer group h-20"
                         onClick={() => handleRowClick(member)}
                       >
                         <TableCell className="px-6 py-6">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center font-bold text-blue-700 text-sm">
+                            <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center font-bold text-gray-700 text-sm">
                               {member.firstName.charAt(0)}{member.lastName.charAt(0)}
                             </div>
-                            <span className="font-mono text-slate-700 font-semibold">{member.memberId}</span>
+                            <span className="font-mono text-gray-700 font-semibold">{member.memberId}</span>
                           </div>
                         </TableCell>
                         
                         <TableCell className="px-6 py-6">
                           <div className="flex items-center gap-3">
                             <div className="flex flex-col">
-                              <span className="font-semibold text-slate-900 text-base">
+                              <span className="font-semibold text-gray-900 text-base">
                                 {member.firstName} {member.lastName}
                               </span>
-                              <span className="text-slate-500 text-sm">
+                              <span className="text-gray-500 text-sm">
                                 ID: {member.memberId}
                               </span>
                             </div>
                             <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                              <Eye className="h-4 w-4 text-blue-600" />
+                              <Eye className="h-4 w-4 text-gray-600" />
                             </div>
                           </div>
                         </TableCell>
                         
                         <TableCell className="px-6 py-6">
-                          <span className="text-slate-700 font-medium">{member.email}</span>
+                          <span className="text-gray-700 font-medium">{member.email}</span>
                         </TableCell>
                         
                         <TableCell className="px-6 py-6">
@@ -286,7 +286,7 @@ export const EnhancedDataTable = ({
                             {getMembershipIcon(member.membershipName)}
                             <Tooltip>
                               <TooltipTrigger>
-                                <span className="text-slate-700 font-medium truncate max-w-[240px] block">
+                                <span className="text-gray-700 font-medium truncate max-w-[240px] block">
                                   {member.membershipName}
                                 </span>
                               </TooltipTrigger>
@@ -299,7 +299,7 @@ export const EnhancedDataTable = ({
                         
                         <TableCell className="px-6 py-6">
                           <div className="flex flex-col items-start gap-1">
-                            <span className="text-slate-700 font-medium">
+                            <span className="text-gray-700 font-medium">
                               {new Date(member.endDate).toLocaleDateString()}
                             </span>
                             {isExpiringSoon && !isChurned && (
@@ -317,8 +317,8 @@ export const EnhancedDataTable = ({
                         
                         <TableCell className="px-6 py-6">
                           <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-slate-500" />
-                            <span className="text-slate-700 font-medium">{member.location}</span>
+                            <MapPin className="h-4 w-4 text-gray-500" />
+                            <span className="text-gray-700 font-medium">{member.location}</span>
                           </div>
                         </TableCell>
                         
@@ -364,7 +364,7 @@ export const EnhancedDataTable = ({
                                   </Badge>
                                 ))}
                                 {member.tags.length > 2 && (
-                                  <Badge variant="outline" className="text-xs bg-slate-50 text-slate-600 px-2 py-1">
+                                  <Badge variant="outline" className="text-xs bg-gray-50 text-gray-600 px-2 py-1">
                                     +{member.tags.length - 2}
                                   </Badge>
                                 )}
@@ -372,8 +372,8 @@ export const EnhancedDataTable = ({
                             )}
                             {(member.comments || member.notes) && (
                               <div className="flex items-center gap-1">
-                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                                <span className="text-xs text-slate-500">Has notes</span>
+                                <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+                                <span className="text-xs text-gray-500">Has notes</span>
                               </div>
                             )}
                           </div>
@@ -418,11 +418,11 @@ export const EnhancedDataTable = ({
 
             {/* Enhanced Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-8 p-6 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200 shadow-lg">
-                <p className="text-slate-700 text-base font-semibold">
-                  Showing <span className="text-blue-600 font-bold">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                  <span className="text-blue-600 font-bold">{Math.min(currentPage * itemsPerPage, filteredAndSortedData.length)}</span> of{' '}
-                  <span className="text-blue-600 font-bold">{filteredAndSortedData.length}</span> results
+              <div className="flex items-center justify-between mt-8 p-6 bg-gray-50 rounded-xl border border-gray-200 shadow-lg">
+                <p className="text-gray-700 text-base font-semibold">
+                  Showing <span className="text-gray-600 font-bold">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
+                  <span className="text-gray-600 font-bold">{Math.min(currentPage * itemsPerPage, filteredAndSortedData.length)}</span> of{' '}
+                  <span className="text-gray-600 font-bold">{filteredAndSortedData.length}</span> results
                 </p>
                 <div className="flex gap-3">
                   <Button
@@ -430,11 +430,11 @@ export const EnhancedDataTable = ({
                     size="lg"
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
-                    className="border-slate-300 hover:bg-white hover:border-blue-500 font-semibold px-6 shadow-md"
+                    className="border-gray-300 hover:bg-white hover:border-gray-500 font-semibold px-6 shadow-md"
                   >
                     Previous
                   </Button>
-                  <div className="flex items-center px-6 py-3 bg-white border-2 border-slate-300 rounded-lg text-base font-bold text-slate-700 shadow-md">
+                  <div className="flex items-center px-6 py-3 bg-white border-2 border-gray-300 rounded-lg text-base font-bold text-gray-700 shadow-md">
                     Page {currentPage} of {totalPages}
                   </div>
                   <Button
@@ -442,7 +442,7 @@ export const EnhancedDataTable = ({
                     size="lg"
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
-                    className="border-slate-300 hover:bg-white hover:border-blue-500 font-semibold px-6 shadow-md"
+                    className="border-gray-300 hover:bg-white hover:border-gray-500 font-semibold px-6 shadow-md"
                   >
                     Next
                   </Button>

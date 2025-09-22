@@ -349,6 +349,86 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* Notes Overview Section */}
+                {notes.length > 0 && (
+                  <div className="mt-8">
+                    <Card className="shadow-lg border-2">
+                      <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-800 dark:to-purple-700">
+                        <CardTitle className="flex items-center gap-3">
+                          <div className="p-2 bg-purple-500 text-white rounded-lg">
+                            <FileText className="h-5 w-5" />
+                          </div>
+                          Recent Notes ({notes.length})
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-6">
+                        <div className="space-y-4">
+                          {notes.slice(0, 3).map((note) => (
+                            <div key={note.id} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                              <p className="text-slate-900 dark:text-white text-sm mb-2">{note.text}</p>
+                              <p className="text-xs text-slate-500">
+                                {note.timestamp.toLocaleString()}
+                              </p>
+                            </div>
+                          ))}
+                          {notes.length > 3 && (
+                            <div className="text-center">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => setActiveTab('notes')}
+                                className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                              >
+                                View all {notes.length} notes
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {/* Comments Overview Section */}
+                {comments.length > 0 && (
+                  <div className="mt-8">
+                    <Card className="shadow-lg border-2">
+                      <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-800 dark:to-orange-700">
+                        <CardTitle className="flex items-center gap-3">
+                          <div className="p-2 bg-orange-500 text-white rounded-lg">
+                            <MessageSquare className="h-5 w-5" />
+                          </div>
+                          Recent Comments ({comments.length})
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-6">
+                        <div className="space-y-4">
+                          {comments.slice(0, 3).map((comment) => (
+                            <div key={comment.id} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                              <p className="text-slate-900 dark:text-white text-sm mb-2">{comment.text}</p>
+                              <p className="text-xs text-slate-500">
+                                {comment.timestamp.toLocaleString()}
+                              </p>
+                            </div>
+                          ))}
+                          {comments.length > 3 && (
+                            <div className="text-center">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => setActiveTab('comments')}
+                                className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                              >
+                                View all {comments.length} comments
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="comments" className="space-y-6">
