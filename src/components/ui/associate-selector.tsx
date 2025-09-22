@@ -3,15 +3,22 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 const ASSOCIATES = [
-  "Akshay",
-  "Zaheer", 
-  "Vahishta",
-  "Saniya",
-  "Deesha",
-  "Imran",
-  "Shipra",
-  "Nadiya",
-  "Zahur"
+  "Admin Admin",
+  "Akshay Rane", 
+  "Api Serou",
+  "Imran Shaikh",
+  "Manisha Rathod",
+  "Nadiya Shaikh",
+  "Pavanthika",
+  "Prathap Kp",
+  "Priyanka Abnave",
+  "Santhosh Kumar",
+  "Sheetal Kataria",
+  "Shipra Bhika",
+  "Tahira Sayyed",
+  "Vahishta Fitter",
+  "Zaheer Agarbattiwala",
+  "Zahur Shaikh"
 ] as const;
 
 export type Associate = typeof ASSOCIATES[number];

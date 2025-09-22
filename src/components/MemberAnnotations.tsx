@@ -1,11 +1,12 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { AssociateSelector } from "@/components/ui/associate-selector";
 import { X, Plus, Save } from "lucide-react";
 import { MembershipData } from "@/types/membership";
 import { googleSheetsService } from "@/services/googleSheets";
@@ -19,11 +20,23 @@ interface MemberAnnotationsProps {
 }
 
 export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnnotationsProps) => {
-  const [comments, setComments] = useState(member?.comments || '');
-  const [notes, setNotes] = useState(member?.notes || '');
-  const [tags, setTags] = useState<string[]>(member?.tags || []);
+  const [comments, setComments] = useState('');
+  const [notes, setNotes] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
+  const [associateName, setAssociateName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Reset form when member changes or dialog opens
+  useEffect(() => {
+    if (member && isOpen) {
+      setComments(member.comments || '');
+      setNotes(member.notes || '');
+      setTags(member.tags || []);
+      setAssociateName('');
+      setNewTag('');
+    }
+  }, [member, isOpen]);
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -39,18 +52,36 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
   const handleSave = async () => {
     if (!member) return;
     
+    if (!associateName) {
+      toast.error("Please select an associate name");
+      return;
+    }
+    
     setIsSaving(true);
     try {
+      const timestamp = new Date().toISOString();
+      
+      // Append associate name and date to comments/notes if they exist
+      const annotatedComments = comments ? 
+        `${comments}\n\n[Updated by ${associateName} on ${new Date().toLocaleDateString()}]` : 
+        comments;
+      
+      const annotatedNotes = notes ? 
+        `${notes}\n\n[Updated by ${associateName} on ${new Date().toLocaleDateString()}]` : 
+        notes;
+
       await googleSheetsService.saveAnnotation(
         member.memberId,
         member.email,
-        comments,
-        notes,
+        annotatedComments,
+        annotatedNotes,
         tags,
-        member.uniqueId // Pass unique ID for better tracking
+        member.uniqueId, // Pass unique ID for better tracking
+        associateName,
+        timestamp
       );
       
-      onSave(member.memberId, comments, notes, tags);
+      onSave(member.memberId, annotatedComments, annotatedNotes, tags);
       toast.success("Annotations saved successfully!");
       onClose();
     } catch (error) {
@@ -101,6 +132,17 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
                 </Badge>
               </div>
             </div>
+          </div>
+
+          {/* Associate Name */}
+          <div className="space-y-2">
+            <AssociateSelector
+              label="Associate Name"
+              value={associateName}
+              onValueChange={setAssociateName}
+              placeholder="Select associate handling this update"
+              required
+            />
           </div>
 
           {/* Comments */}

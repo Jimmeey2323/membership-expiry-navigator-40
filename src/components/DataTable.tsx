@@ -1,13 +1,13 @@
 import { useState, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ChevronDown, ChevronUp, Search, ArrowUpDown, MessageSquare, FileText, Eye, TrendingUp, Calendar } from "lucide-react";
+import { ChevronDown, ChevronUp, ArrowUpDown, FileText, Eye, TrendingUp, Calendar } from "lucide-react";
 import { MembershipData } from "@/types/membership";
 import { MemberAnnotations } from "./MemberAnnotations";
+import { useFilters } from "@/contexts/FilterContext";
 interface DataTableProps {
   data: MembershipData[];
   title: string;
@@ -22,7 +22,7 @@ export const DataTable = ({
   className = '',
   onAnnotationUpdate
 }: DataTableProps) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const { getFilteredData } = useFilters();
   const [sortField, setSortField] = useState<SortField>('endDate');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -31,7 +31,8 @@ export const DataTable = ({
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const itemsPerPage = 15;
   const filteredAndSortedData = useMemo(() => {
-    let filtered = data.filter(item => Object.values(item).some(value => value.toString().toLowerCase().includes(searchTerm.toLowerCase())));
+    // Use global filters from FilterContext
+    let filtered = getFilteredData(data);
     filtered.sort((a, b) => {
       const aValue = a[sortField];
       const bValue = b[sortField];
@@ -40,7 +41,7 @@ export const DataTable = ({
       return 0;
     });
     return filtered;
-  }, [data, searchTerm, sortField, sortDirection]);
+  }, [data, getFilteredData, sortField, sortDirection]);
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredAndSortedData.slice(startIndex, startIndex + itemsPerPage);
@@ -95,10 +96,6 @@ export const DataTable = ({
                 {title}
               </h3>
               <div className="flex items-center gap-4">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
-                  <Input placeholder="Search members..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-12 pr-4 py-3 bg-slate-50 border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl w-80 transition-all duration-200" />
-                </div>
                 <Badge variant="secondary" className="bg-blue-50 text-blue-700 px-4 py-2 text-sm font-semibold border border-blue-200">
                   {filteredAndSortedData.length} records
                 </Badge>

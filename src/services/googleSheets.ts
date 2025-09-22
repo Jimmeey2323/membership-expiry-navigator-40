@@ -163,17 +163,17 @@ class GoogleSheetsService {
     }
   }
 
-  async saveAnnotation(memberId: string, email: string, comments: string, notes: string, tags: string[], uniqueId?: string): Promise<void> {
+  async saveAnnotation(memberId: string, email: string, comments: string, notes: string, tags: string[], uniqueId?: string, associateName?: string, customTimestamp?: string): Promise<void> {
     try {
       const annotationsData = await this.fetchAnnotations();
       // Try to find by uniqueId first, then by memberId for backward compatibility
       const existingIndex = annotationsData.findIndex(row => 
         (uniqueId && row[6] === uniqueId) || row[0] === memberId
       );
-      const timestamp = new Date().toISOString();
+      const timestamp = customTimestamp || new Date().toISOString();
       const tagsString = tags.join(', ');
       
-      const newRow = [memberId, email, comments, notes, tagsString, timestamp, uniqueId || ''];
+      const newRow = [memberId, email, comments, notes, tagsString, timestamp, uniqueId || '', associateName || ''];
       
       if (existingIndex >= 0) {
         // Update existing row

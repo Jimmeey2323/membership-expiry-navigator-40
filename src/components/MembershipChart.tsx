@@ -1,11 +1,12 @@
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import { MembershipData } from "@/types/membership";
 import { TrendingUp, Users, MapPin, Calendar, BarChart3 } from "lucide-react";
+import { useFilters } from "@/contexts/FilterContext";
 
 interface MembershipChartProps {
   data: MembershipData[];
@@ -14,16 +15,20 @@ interface MembershipChartProps {
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16'];
 
 export const MembershipChart = ({ data }: MembershipChartProps) => {
+  const { getFilteredData } = useFilters();
   const [activeChart, setActiveChart] = useState<'status' | 'types' | 'locations' | 'trends'>('status');
 
-  const statusData = data.reduce((acc, member) => {
+  // Use filtered data instead of raw data
+  const filteredData = useMemo(() => getFilteredData(data), [data, getFilteredData]);
+
+  const statusData = filteredData.reduce((acc, member) => {
     acc[member.status] = (acc[member.status] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
   const pieData = Object.entries(statusData).map(([name, value]) => ({ name, value }));
 
-  const membershipTypeData = data.reduce((acc, member) => {
+  const membershipTypeData = filteredData.reduce((acc, member) => {
     acc[member.membershipName] = (acc[member.membershipName] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
@@ -36,7 +41,7 @@ export const MembershipChart = ({ data }: MembershipChartProps) => {
     }))
     .slice(0, 8);
 
-  const locationData = data.reduce((acc, member) => {
+  const locationData = filteredData.reduce((acc, member) => {
     if (member.location && member.location !== '-') {
       acc[member.location] = (acc[member.location] || 0) + 1;
     }
@@ -163,10 +168,10 @@ export const MembershipChart = ({ data }: MembershipChartProps) => {
   };
 
   const getChartStats = () => {
-    const totalMembers = data.length;
-    const activeMembers = data.filter(m => m.status === 'Active').length;
-    const totalSessions = data.reduce((sum, m) => sum + m.sessionsLeft, 0);
-    const avgSessions = Math.round(totalSessions / totalMembers);
+    const totalMembers = filteredData.length;
+    const activeMembers = filteredData.filter(m => m.status === 'Active').length;
+    const totalSessions = filteredData.reduce((sum, m) => sum + m.sessionsLeft, 0);
+    const avgSessions = Math.round(totalSessions / totalMembers) || 0;
 
     return [
       { label: 'Total Members', value: totalMembers, color: 'text-blue-600', bg: 'bg-blue-50' },
