@@ -86,7 +86,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
           }
         }
 
-        return {
+        const comment = {
           id: (index + 1).toString(),
           text: actualText,
           timestamp,
@@ -95,6 +95,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
           lastEditedBy: lastEditedBy || undefined,
           lastEditedAt
         };
+        return comment;
       }).filter(c => c.text);
     }
     return [];
@@ -129,7 +130,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
           }
         }
 
-        return {
+        const note = {
           id: (index + 1).toString(),
           text: actualText,
           timestamp,
@@ -138,6 +139,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
           lastEditedBy: lastEditedBy || undefined,
           lastEditedAt
         };
+        return note;
       }).filter(n => n.text);
     }
     return [];

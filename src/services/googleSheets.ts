@@ -282,9 +282,9 @@ class GoogleSheetsService {
         paid: "-",
         status: "Active" as const,
         sessionsLeft: 0,
-        comments: "",
-        notes: "",
-        tags: []
+        comments: "Great member, very consistent with classes.\n[Created by: Admin Admin at 9/20/2025, 10:30:00 AM]---\nAsked about personal training options.\n[Created by: Akshay Rane at 9/21/2025, 2:15:00 PM]",
+        notes: "Prefers morning classes\n[Created by: Manisha Rathod at 9/19/2025, 9:00:00 AM]---\nHas some knee issues, recommend modifications\n[Created by: Prathap Kp at 9/20/2025, 11:45:00 AM]\n[Last edited by: Sheetal Kataria at 9/22/2025, 8:30:00 AM]",
+        tags: ["VIP", "Morning Classes", "Consistent"]
       },
       {
         uniqueId: "23555332-Studio Annual Unlimited-undefined-2026-09-02T04:00:00.000Z",
@@ -304,9 +304,9 @@ class GoogleSheetsService {
         paid: "-",
         status: "Active" as const,
         sessionsLeft: 0,
-        comments: "",
-        notes: "",
-        tags: []
+        comments: "New member, very enthusiastic!\n[Created by: Imran Shaikh at 9/18/2025, 4:30:00 PM]",
+        notes: "Follows special diet, needs nutritional guidance\n[Created by: Nadiya Shaikh at 9/19/2025, 12:00:00 PM]",
+        tags: ["New Member", "Enthusiastic"]
       },
       {
         uniqueId: "110567-Studio 4 Class Package-39727200-2025-04-12T13:27:43.839Z",
@@ -326,9 +326,9 @@ class GoogleSheetsService {
         paid: "6313",
         status: "Churned" as const,
         sessionsLeft: 0,
-        comments: "",
-        notes: "",
-        tags: []
+        comments: "Had to cancel due to work commitments\n[Created by: Pavanthika at 4/25/2025, 6:00:00 PM]",
+        notes: "May rejoin in 6 months when schedule permits\n[Created by: Santhosh Kumar at 4/25/2025, 6:30:00 PM]",
+        tags: ["Work Conflict", "Potential Return"]
       }
     ];
   }
