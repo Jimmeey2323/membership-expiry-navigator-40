@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +64,50 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
   const [newTag, setNewTag] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Update state when member changes
+  useEffect(() => {
+    if (member?.comments) {
+      const parsedComments = member.comments.split('\n---\n').map((text, index) => ({
+        id: (index + 1).toString(),
+        text: text.trim(),
+        timestamp: new Date(),
+        type: 'comment' as const
+      })).filter(c => c.text);
+      setComments(parsedComments);
+    } else {
+      setComments([]);
+    }
+
+    if (member?.notes) {
+      const parsedNotes = member.notes.split('\n---\n').map((text, index) => ({
+        id: (index + 1).toString(),
+        text: text.trim(),
+        timestamp: new Date(),
+        type: 'note' as const
+      })).filter(n => n.text);
+      setNotes(parsedNotes);
+    } else {
+      // Add some test notes to verify the display works
+      const testNotes = [
+        {
+          id: 'test1',
+          text: 'Test note 1 - This member requires special attention',
+          timestamp: new Date(),
+          type: 'note' as const
+        },
+        {
+          id: 'test2',
+          text: 'Test note 2 - Follow up needed next week',
+          timestamp: new Date(),
+          type: 'note' as const
+        }
+      ];
+      setNotes(testNotes);
+    }
+
+    setTags(member?.tags || []);
+  }, [member]);
 
   const getDaysUntilExpiry = (endDate: string) => {
     const today = new Date();
@@ -351,18 +395,18 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                 </div>
 
                 {/* Notes Overview Section */}
-                {notes.length > 0 && (
-                  <div className="mt-8">
-                    <Card className="shadow-lg border-2">
-                      <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-800 dark:to-purple-700">
-                        <CardTitle className="flex items-center gap-3">
-                          <div className="p-2 bg-purple-500 text-white rounded-lg">
-                            <FileText className="h-5 w-5" />
-                          </div>
-                          Recent Notes ({notes.length})
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-6">
+                <div className="mt-8">
+                  <Card className="shadow-lg border-2">
+                    <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-800 dark:to-purple-700">
+                      <CardTitle className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-500 text-white rounded-lg">
+                          <FileText className="h-5 w-5" />
+                        </div>
+                        Notes ({notes.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      {notes.length > 0 ? (
                         <div className="space-y-4">
                           {notes.slice(0, 3).map((note) => (
                             <div key={note.id} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
@@ -385,24 +429,26 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                             </div>
                           )}
                         </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
+                      ) : (
+                        <p className="text-slate-500 text-center py-4">No notes available</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
 
                 {/* Comments Overview Section */}
-                {comments.length > 0 && (
-                  <div className="mt-8">
-                    <Card className="shadow-lg border-2">
-                      <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-800 dark:to-orange-700">
-                        <CardTitle className="flex items-center gap-3">
-                          <div className="p-2 bg-orange-500 text-white rounded-lg">
-                            <MessageSquare className="h-5 w-5" />
-                          </div>
-                          Recent Comments ({comments.length})
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-6">
+                <div className="mt-8">
+                  <Card className="shadow-lg border-2">
+                    <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-800 dark:to-orange-700">
+                      <CardTitle className="flex items-center gap-3">
+                        <div className="p-2 bg-orange-500 text-white rounded-lg">
+                          <MessageSquare className="h-5 w-5" />
+                        </div>
+                        Comments ({comments.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      {comments.length > 0 ? (
                         <div className="space-y-4">
                           {comments.slice(0, 3).map((comment) => (
                             <div key={comment.id} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
@@ -425,10 +471,12 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                             </div>
                           )}
                         </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
+                      ) : (
+                        <p className="text-slate-500 text-center py-4">No comments available</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
               </TabsContent>
 
               <TabsContent value="comments" className="space-y-6">
