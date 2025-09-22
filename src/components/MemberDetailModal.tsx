@@ -37,6 +37,12 @@ interface Comment {
   lastEditedAt?: Date; // When it was last edited
 }
 
+interface TagEntry {
+  tag: string;
+  createdBy: string;
+  timestamp: Date;
+}
+
 const STAFF_NAMES = [
   "Admin Admin",
   "Akshay Rane", 
@@ -57,19 +63,9 @@ const STAFF_NAMES = [
 ];
 
 export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDetailModalProps) => {
-  // Debug logging to understand the data flow
-  console.log('=== MemberDetailModal Debug ===');
-  console.log('Modal isOpen:', isOpen);
-  console.log('Member data received:', member);
-  if (member) {
-    console.log('Member comments raw:', member.comments);
-    console.log('Member notes raw:', member.notes);
-    console.log('Member tags raw:', member.tags);
-  }
-  
   const [comments, setComments] = useState<Comment[]>([]);
   const [notes, setNotes] = useState<Comment[]>([]);
-  const [tags, setTags] = useState<string[]>([]);
+  const [tags, setTags] = useState<TagEntry[]>([]);
   const [newComment, setNewComment] = useState('');
   const [newNote, setNewNote] = useState('');
   const [newTag, setNewTag] = useState('');
@@ -84,7 +80,6 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
   const parseComments = (commentsString: string): Comment[] => {
     if (!commentsString) return [];
     
-    console.log('Parsing comments string:', commentsString);
     return commentsString.split('\n---\n').map((text, index) => {
       const lines = text.trim().split('\n');
       let actualText = '';
@@ -111,7 +106,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
         }
       }
 
-      const comment = {
+      return {
         id: (index + 1).toString(),
         text: actualText,
         timestamp,
@@ -120,8 +115,6 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
         lastEditedBy: lastEditedBy || undefined,
         lastEditedAt
       };
-      console.log('Processed comment:', comment);
-      return comment;
     }).filter(c => c.text);
   };
 
@@ -129,7 +122,6 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
   const parseNotes = (notesString: string): Comment[] => {
     if (!notesString) return [];
     
-    console.log('Parsing notes string:', notesString);
     return notesString.split('\n---\n').map((text, index) => {
       const lines = text.trim().split('\n');
       let actualText = '';
@@ -156,7 +148,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
         }
       }
 
-      const note = {
+      return {
         id: (index + 1).toString(),
         text: actualText,
         timestamp,
@@ -165,27 +157,26 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
         lastEditedBy: lastEditedBy || undefined,
         lastEditedAt
       };
-      console.log('Processed note:', note);
-      return note;
     }).filter(n => n.text);
   };
 
   // Update state when member changes
   useEffect(() => {
-    console.log('useEffect triggered - member changed:', member);
     if (member) {
       const parsedComments = parseComments(member.comments || '');
       const parsedNotes = parseNotes(member.notes || '');
       
-      console.log('Setting comments:', parsedComments);
-      console.log('Setting notes:', parsedNotes);
-      console.log('Setting tags:', member.tags || []);
+      // Convert string tags to TagEntry format for backward compatibility
+      const parsedTags: TagEntry[] = (member.tags || []).map(tag => ({
+        tag,
+        createdBy: 'Unknown', // Legacy tags don't have creator info
+        timestamp: new Date()
+      }));
       
       setComments(parsedComments);
       setNotes(parsedNotes);
-      setTags(member.tags || []);
+      setTags(parsedTags);
     } else {
-      console.log('No member - clearing all data');
       setComments([]);
       setNotes([]);
       setTags([]);
@@ -210,6 +201,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     };
     setComments(prev => [...prev, comment]);
     setNewComment('');
+    // Keep the selected name for convenience when adding multiple entries
   };
 
   const addNote = () => {
@@ -223,16 +215,19 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     };
     setNotes(prev => [...prev, note]);
     setNewNote('');
+    // Keep the selected name for convenience when adding multiple entries
   };
 
   const startEditingComment = (comment: Comment) => {
     setEditingComment(comment.id);
     setEditText(comment.text);
+    setSelectedName(comment.lastEditedBy || comment.createdBy || STAFF_NAMES[0]); // Set to last editor or creator
   };
 
   const startEditingNote = (note: Comment) => {
     setEditingNote(note.id);
     setEditText(note.text);
+    setSelectedName(note.lastEditedBy || note.createdBy || STAFF_NAMES[0]); // Set to last editor or creator
   };
 
   const saveEditComment = (commentId: string) => {
@@ -273,16 +268,25 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     setEditingComment(null);
     setEditingNote(null);
     setEditText('');
+    setSelectedName(STAFF_NAMES[0]); // Reset to default name
   };
 
   const addTag = () => {
-    if (!newTag.trim() || tags.includes(newTag.trim())) return;
-    setTags(prev => [...prev, newTag.trim()]);
+    if (!newTag.trim() || !selectedName) return;
+    // Check if tag already exists
+    if (tags.some(tagEntry => tagEntry.tag === newTag.trim())) return;
+    
+    const newTagEntry: TagEntry = {
+      tag: newTag.trim(),
+      createdBy: selectedName,
+      timestamp: new Date()
+    };
+    setTags(prev => [...prev, newTagEntry]);
     setNewTag('');
   };
 
-  const removeTag = (tagToRemove: string) => {
-    setTags(prev => prev.filter(tag => tag !== tagToRemove));
+  const removeTag = (tagToRemove: TagEntry) => {
+    setTags(prev => prev.filter(tagEntry => tagEntry.tag !== tagToRemove.tag));
   };
 
   const removeComment = (id: string) => {
@@ -320,17 +324,20 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
         }
         return formatted;
       }).join('\n---\n');
+
+      // Convert TagEntry back to string array for saving
+      const tagsForSaving = tags.map(tagEntry => tagEntry.tag);
       
       await googleSheetsService.saveAnnotation(
         member.memberId,
         member.email,
         allComments,
         allNotes,
-        tags,
+        tagsForSaving,
         member.uniqueId // Add unique ID for better persistence
       );
       
-      onSave(member.uniqueId || member.memberId, allComments, allNotes, tags);
+      onSave(member.uniqueId || member.memberId, allComments, allNotes, tagsForSaving);
       toast.success("Member details saved successfully!");
       onClose();
     } catch (error) {
@@ -696,6 +703,24 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                           <div className="flex-1 space-y-2">
                             {editingComment === comment.id ? (
                               <div className="space-y-3">
+                                <div>
+                                  <Label htmlFor="edit-comment-name">Edited by</Label>
+                                  <Select value={selectedName} onValueChange={setSelectedName}>
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue placeholder="Select staff member" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {STAFF_NAMES.map((name) => (
+                                        <SelectItem key={name} value={name}>
+                                          <div className="flex items-center gap-2">
+                                            <UserCircle className="h-4 w-4" />
+                                            {name}
+                                          </div>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                                 <Textarea
                                   value={editText}
                                   onChange={(e) => setEditText(e.target.value)}
@@ -705,7 +730,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                                   <Button
                                     size="sm"
                                     onClick={() => saveEditComment(comment.id)}
-                                    disabled={!editText.trim()}
+                                    disabled={!editText.trim() || !selectedName}
                                   >
                                     <Check className="h-4 w-4 mr-1" />
                                     Save
@@ -822,6 +847,24 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                           <div className="flex-1 space-y-2">
                             {editingNote === note.id ? (
                               <div className="space-y-3">
+                                <div>
+                                  <Label htmlFor="edit-note-name">Edited by</Label>
+                                  <Select value={selectedName} onValueChange={setSelectedName}>
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue placeholder="Select staff member" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {STAFF_NAMES.map((name) => (
+                                        <SelectItem key={name} value={name}>
+                                          <div className="flex items-center gap-2">
+                                            <UserCircle className="h-4 w-4" />
+                                            {name}
+                                          </div>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                                 <Textarea
                                   value={editText}
                                   onChange={(e) => setEditText(e.target.value)}
@@ -831,7 +874,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                                   <Button
                                     size="sm"
                                     onClick={() => saveEditNote(note.id)}
-                                    disabled={!editText.trim()}
+                                    disabled={!editText.trim() || !selectedName}
                                   >
                                     <Check className="h-4 w-4 mr-1" />
                                     Save
@@ -903,9 +946,30 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
               <TabsContent value="tags" className="space-y-6">
                 <Card className="shadow-lg">
                   <CardHeader>
-                    <CardTitle>Add New Tag</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <Tag className="h-5 w-5" />
+                      Add New Tag
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="tag-staff-select">Created by</Label>
+                      <Select value={selectedName} onValueChange={setSelectedName}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select staff member" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STAFF_NAMES.map((name) => (
+                            <SelectItem key={name} value={name}>
+                              <div className="flex items-center gap-2">
+                                <UserCircle className="h-4 w-4" />
+                                {name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="flex gap-2">
                       <Input
                         placeholder="Enter a new tag..."
@@ -914,7 +978,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                         onKeyPress={(e) => e.key === 'Enter' && addTag()}
                         className="flex-1"
                       />
-                      <Button onClick={addTag} disabled={!newTag.trim()}>
+                      <Button onClick={addTag} disabled={!newTag.trim() || !selectedName}>
                         <Plus className="h-4 w-4 mr-2" />
                         Add Tag
                       </Button>
@@ -928,22 +992,31 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                   </CardHeader>
                   <CardContent>
                     {tags.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {tags.map((tag, index) => (
-                          <Badge 
-                            key={index} 
-                            variant="secondary" 
-                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 text-blue-800 border border-blue-200 hover:from-blue-100 hover:to-purple-100 transition-all duration-200"
-                          >
-                            <Star className="h-3 w-3" />
-                            {tag}
+                      <div className="space-y-3">
+                        {tags.map((tagEntry, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <Badge 
+                                variant="secondary" 
+                                className="px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 border-blue-300"
+                              >
+                                <Star className="h-3 w-3 mr-1" />
+                                {tagEntry.tag}
+                              </Badge>
+                              <div className="flex items-center gap-2 text-xs text-slate-500">
+                                <UserCircle className="h-3 w-3" />
+                                <span>Added by: {tagEntry.createdBy}</span>
+                                <span>•</span>
+                                <span>{tagEntry.timestamp.toLocaleString()}</span>
+                              </div>
+                            </div>
                             <button
-                              onClick={() => removeTag(tag)}
-                              className="ml-2 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
+                              onClick={() => removeTag(tagEntry)}
+                              className="ml-2 hover:bg-destructive/20 rounded-full p-1 transition-colors text-red-500 hover:text-red-700"
                             >
-                              <X className="h-3 w-3" />
+                              <X className="h-4 w-4" />
                             </button>
-                          </Badge>
+                          </div>
                         ))}
                       </div>
                     ) : (
