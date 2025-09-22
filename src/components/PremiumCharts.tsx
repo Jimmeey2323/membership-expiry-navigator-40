@@ -9,6 +9,7 @@ import {
   RadialBarChart, RadialBar, ComposedChart
 } from "recharts";
 import { MembershipData } from "@/types/membership";
+import { useFilters } from "@/contexts/FilterContext";
 import { 
   TrendingUp, Users, MapPin, Calendar, BarChart3, Activity,
   Crown, Target, Zap, Award, DollarSign, Clock
@@ -27,10 +28,14 @@ const PREMIUM_COLORS = {
 };
 
 export const PremiumCharts = ({ data }: PremiumChartsProps) => {
+  const { getFilteredData, hasActiveFilters, getActiveFilterCount } = useFilters();
   const [activeChart, setActiveChart] = useState<'overview' | 'revenue' | 'engagement' | 'trends'>('overview');
 
-  // Data processing
-  const statusData = data.reduce((acc, member) => {
+  // Use filtered data from global context
+  const filteredData = getFilteredData(data);
+
+  // Data processing using filtered data
+  const statusData = filteredData.reduce((acc, member) => {
     acc[member.status] = (acc[member.status] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
@@ -41,7 +46,7 @@ export const PremiumCharts = ({ data }: PremiumChartsProps) => {
     color: PREMIUM_COLORS.primary[index % PREMIUM_COLORS.primary.length]
   }));
 
-  const membershipTypeData = data.reduce((acc, member) => {
+  const membershipTypeData = filteredData.reduce((acc, member) => {
     const shortName = member.membershipName.length > 20 
       ? member.membershipName.substring(0, 20) + '...' 
       : member.membershipName;
@@ -53,7 +58,7 @@ export const PremiumCharts = ({ data }: PremiumChartsProps) => {
     .map(([name, count]) => ({ name, count, fullName: name }))
     .slice(0, 8);
 
-  const locationData = data.reduce((acc, member) => {
+  const locationData = filteredData.reduce((acc, member) => {
     if (member.location && member.location !== '-') {
       acc[member.location] = (acc[member.location] || 0) + 1;
     }
@@ -74,7 +79,7 @@ export const PremiumCharts = ({ data }: PremiumChartsProps) => {
     { month: 'Jun', active: 185, expired: 24, new: 48, revenue: 67000, engagement: 91 }
   ];
 
-  const sessionsData = data.reduce((acc, member) => {
+  const sessionsData = filteredData.reduce((acc, member) => {
     const range = member.sessionsLeft === 0 ? '0' :
                  member.sessionsLeft <= 5 ? '1-5' :
                  member.sessionsLeft <= 10 ? '6-10' :
@@ -346,11 +351,11 @@ export const PremiumCharts = ({ data }: PremiumChartsProps) => {
   };
 
   const getChartStats = () => {
-    const totalMembers = data.length;
-    const activeMembers = data.filter(m => m.status === 'Active').length;
-    const totalSessions = data.reduce((sum, m) => sum + m.sessionsLeft, 0);
-    const avgSessions = Math.round(totalSessions / totalMembers);
-    const activeRate = Math.round((activeMembers / totalMembers) * 100);
+    const totalMembers = filteredData.length;
+    const activeMembers = filteredData.filter(m => m.status === 'Active').length;
+    const totalSessions = filteredData.reduce((sum, m) => sum + m.sessionsLeft, 0);
+    const avgSessions = totalMembers > 0 ? Math.round(totalSessions / totalMembers) : 0;
+    const activeRate = totalMembers > 0 ? Math.round((activeMembers / totalMembers) * 100) : 0;
     const revenueProjection = totalMembers * 89; // Average monthly fee simulation
 
     return [
@@ -374,14 +379,24 @@ export const PremiumCharts = ({ data }: PremiumChartsProps) => {
               </div>
             </div>
             <div>
-              <h3 className="text-3xl font-bold bg-gradient-to-r from-slate-900 via-blue-800 to-purple-800 bg-clip-text text-transparent">
+              <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
                 Premium Analytics Dashboard
+                <Crown className="h-6 w-6 text-yellow-500" />
               </h3>
-              <p className="text-slate-600 font-medium mt-1">
-                Advanced insights and performance metrics
+              <p className="text-slate-600 font-medium">
+                {hasActiveFilters() 
+                  ? `Showing filtered results (${getActiveFilterCount()} filter${getActiveFilterCount() !== 1 ? 's' : ''} active) - ${filteredData.length}/${data.length} members`
+                  : `Comprehensive insights for ${data.length} members`
+                }
               </p>
             </div>
           </div>
+          
+          {hasActiveFilters() && (
+            <Badge className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 text-sm font-medium">
+              Filtered View
+            </Badge>
+          )}
           
           <div className="flex gap-3">
             {chartButtons.map((button) => (

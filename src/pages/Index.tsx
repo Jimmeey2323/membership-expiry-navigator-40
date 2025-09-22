@@ -6,12 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnhancedDataTable } from "@/components/EnhancedDataTable";
 import { PremiumCharts } from "@/components/PremiumCharts";
-import { TopFilterSection } from "@/components/TopFilterSection";
+import { GlobalFilterPanel } from "@/components/GlobalFilterPanel";
 import { AddMemberModal } from "@/components/AddMemberModal";
 import { EditMemberModal } from "@/components/EditMemberModal";
 import { FollowUpModal, FollowUpEntry } from "@/components/FollowUpModal";
+import { FilterProvider, useFilters } from "@/contexts/FilterContext";
 import { googleSheetsService } from "@/services/googleSheets";
-import { MembershipData, FilterState } from "@/types/membership";
+import { MembershipData } from "@/types/membership";
 import { 
   Users, 
   UserCheck, 
@@ -34,18 +35,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const Index = () => {
+const DashboardContent = () => {
+  const { getFilteredData } = useFilters();
   const [localMembershipData, setLocalMembershipData] = useState<MembershipData[]>([]);
   const [followUps, setFollowUps] = useState<FollowUpEntry[]>([]);
-  const [filterState, setFilterState] = useState({
-    search: '',
-    status: [] as string[],
-    location: [] as string[],
-    membershipType: [] as string[],
-    expiryRange: '',
-    sessionsRange: '',
-    hasAnnotations: false
-  });
   const [selectedMember, setSelectedMember] = useState<MembershipData | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
@@ -110,41 +103,23 @@ const Index = () => {
     setShowFollowUpModal(false);
   };
 
-  const handleFilterChange = (newFilters: any) => {
-    setFilterState(newFilters);
-  };
-
-  const getFilteredData = () => {
-    return localMembershipData.filter(member => {
-      if (filterState.search && 
-          !member.firstName.toLowerCase().includes(filterState.search.toLowerCase()) &&
-          !member.lastName.toLowerCase().includes(filterState.search.toLowerCase()) &&
-          !member.email.toLowerCase().includes(filterState.search.toLowerCase())) {
-        return false;
-      }
-      if (filterState.status.length > 0 && !filterState.status.includes(member.status)) return false;
-      if (filterState.location.length > 0 && !filterState.location.includes(member.location)) return false;
-      if (filterState.membershipType.length > 0 && !filterState.membershipType.includes(member.membershipName)) return false;
-      return true;
-    });
-  };
-
-  const filteredData = getFilteredData();
+  // Use the global filter context to get filtered data
+  const filteredData = getFilteredData(localMembershipData);
   const totalMembers = localMembershipData.length;
-  const activeMembers = localMembershipData.filter(member => member.status === 'Active');
-  const churnedMembers = localMembershipData.filter(member => member.status === 'Churned');
-  const expiringMembers = localMembershipData.filter(member => {
+  const activeMembers = getFilteredData(localMembershipData.filter(member => member.status === 'Active'));
+  const churnedMembers = getFilteredData(localMembershipData.filter(member => member.status === 'Churned'));
+  const expiringMembers = getFilteredData(localMembershipData.filter(member => {
     if (!member.endDate) return false;
     const endDate = new Date(member.endDate);
     const now = new Date();
     const daysUntilExpiry = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     return daysUntilExpiry <= 30 && daysUntilExpiry > 0 && member.status === 'Active';
-  });
-  const withAnnotations = localMembershipData.filter(member => 
+  }));
+  const withAnnotations = getFilteredData(localMembershipData.filter(member => 
     (member.comments && member.comments.trim()) || 
     (member.notes && member.notes.trim()) || 
     (member.tags && member.tags.length > 0)
-  );
+  ));
 
   const quickActions = [
     { 
@@ -189,12 +164,8 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6 space-y-6">
-      {/* Filter Section - Now at the top */}
-      <TopFilterSection 
-        filters={filterState}
-        onFiltersChange={handleFilterChange}
-        data={localMembershipData}
-      />
+      {/* Global Filter Panel - Now at the top */}
+      <GlobalFilterPanel data={localMembershipData} />
 
       {/* Dashboard Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -423,6 +394,14 @@ const Index = () => {
         </>
       )}
     </div>
+  );
+};
+
+const Index = () => {
+  return (
+    <FilterProvider>
+      <DashboardContent />
+    </FilterProvider>
   );
 };
 
