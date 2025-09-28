@@ -52,15 +52,15 @@ export const MetricsDashboard = ({ data }: MetricsDashboardProps) => {
   return (
     <div className="space-y-6 mb-8">
       {/* Header */}
-      <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-xl p-6 text-white shadow-lg">
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-xl p-6 text-white shadow-xl border border-slate-700">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold mb-2">Key Metrics</h2>
-            <p className="text-slate-300">Real-time membership insights</p>
+            <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-white to-slate-200 bg-clip-text text-transparent">Key Metrics</h2>
+            <p className="text-slate-300 font-medium">Real-time membership insights</p>
           </div>
           <div className="flex items-center gap-2 text-sm">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span className="text-slate-300">Live</span>
+            <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+            <span className="text-slate-300 font-medium">Live Data</span>
           </div>
         </div>
       </div>
@@ -103,17 +103,36 @@ export const MetricsDashboard = ({ data }: MetricsDashboardProps) => {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="text-3xl font-bold text-green-900 mb-2 animate-pulse">{activeMembers}</div>
-            <div className="flex items-center justify-between">
-              <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs px-2 py-1">
+            <div className="text-3xl font-bold text-green-900 mb-3 animate-pulse">{activeMembers}</div>
+            <div className="flex items-center justify-between mb-2">
+              <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs px-2 py-1 font-bold">
                 {activeRate.toFixed(1)}%
               </Badge>
-              <div className="w-16 h-2 bg-green-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full transition-all duration-1000 ease-out"
-                  style={{ width: `${activeRate}%` }}
-                ></div>
-              </div>
+              <span className="text-xs text-green-600 font-medium">+5.2% vs last month</span>
+            </div>
+            {/* Advanced Animated Bar Chart */}
+            <div className="flex items-end gap-1 h-12 mt-3">
+              {[...Array(8)].map((_, i) => {
+                const height = Math.random() * 40 + 20;
+                const isHighlighted = i >= 5; // Last 3 bars highlighted
+                return (
+                  <div 
+                    key={i} 
+                    className={`flex-1 rounded-sm transition-all duration-1000 ease-out ${
+                      isHighlighted ? 'bg-gradient-to-t from-green-600 to-green-400' : 'bg-gradient-to-t from-green-300 to-green-200'
+                    }`}
+                    style={{ 
+                      height: `${height}%`,
+                      animationDelay: `${i * 150}ms`,
+                      minHeight: '8px'
+                    }}
+                  ></div>
+                );
+              })}
+            </div>
+            <div className="flex justify-between text-xs text-slate-500 mt-1">
+              <span>Jan</span>
+              <span className="font-bold text-green-600">Aug</span>
             </div>
           </CardContent>
         </Card>
@@ -129,17 +148,58 @@ export const MetricsDashboard = ({ data }: MetricsDashboardProps) => {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="text-3xl font-bold text-red-900 mb-2 animate-pulse">{churnedMembers}</div>
-            <div className="flex items-center justify-between">
-              <Badge variant="secondary" className="bg-red-100 text-red-800 text-xs px-2 py-1">
+            <div className="text-3xl font-bold text-red-900 mb-3 animate-pulse">{churnedMembers}</div>
+            <div className="flex items-center justify-between mb-2">
+              <Badge variant="secondary" className="bg-red-100 text-red-800 text-xs px-2 py-1 font-bold">
                 {churnRate.toFixed(1)}%
               </Badge>
-              <div className="w-16 h-2 bg-red-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-red-400 to-red-600 rounded-full transition-all duration-1000 ease-out"
-                  style={{ width: `${churnRate}%` }}
-                ></div>
-              </div>
+              <span className="text-xs text-red-600 font-medium">-2.1% improvement</span>
+            </div>
+            {/* Animated Line Chart */}
+            <div className="relative h-12 mt-3">
+              <svg className="w-full h-full" viewBox="0 0 100 40">
+                <defs>
+                  <linearGradient id="redGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#ef4444" stopOpacity="0.3"/>
+                    <stop offset="100%" stopColor="#ef4444" stopOpacity="0.1"/>
+                  </linearGradient>
+                </defs>
+                {/* Area under curve */}
+                <path
+                  d="M0,25 Q20,20 40,22 T80,18 L100,15 L100,40 L0,40 Z"
+                  fill="url(#redGradient)"
+                  className="animate-pulse"
+                />
+                {/* Main line */}
+                <path
+                  d="M0,25 Q20,20 40,22 T80,18 L100,15"
+                  fill="none"
+                  stroke="#dc2626"
+                  strokeWidth="2"
+                  className="drop-shadow-sm"
+                  style={{
+                    strokeDasharray: '200',
+                    strokeDashoffset: '200',
+                    animation: 'drawLine 2s ease-out forwards'
+                  }}
+                />
+                {/* Data points */}
+                {[0, 25, 50, 75, 100].map((x, i) => (
+                  <circle
+                    key={i}
+                    cx={x}
+                    cy={25 - i * 2}
+                    r="2"
+                    fill="#dc2626"
+                    className="animate-ping"
+                    style={{ animationDelay: `${i * 300}ms` }}
+                  />
+                ))}
+              </svg>
+            </div>
+            <div className="flex justify-between text-xs text-slate-500 mt-1">
+              <span>6mo ago</span>
+              <span className="font-bold text-red-600">Now</span>
             </div>
           </CardContent>
         </Card>
