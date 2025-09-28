@@ -2,7 +2,7 @@ import { MembershipData } from "@/types/membership";
 
 // Note: This appears to be an OpenAI API key format. For Gemini AI, you'll need a Google AI Studio API key
 // Get one at: https://makersuite.google.com/app/apikey
-const GEMINI_API_KEY = "sk_prod_lggx9AepumkG36Uq4XkDMPFO1ez0jLJ01LrXQfNCCKObL4UcOOEEybll1x7nJKRe4qWieagT8JpX05RkYGagE8RK7nQ9bToUo5d_3375";
+const GEMINI_API_KEY = "AIzaSyCI59uZRMF3Gvv3LQJKoYSpgpG_dZPh1E8";
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
 
 export const AI_TAGS = [

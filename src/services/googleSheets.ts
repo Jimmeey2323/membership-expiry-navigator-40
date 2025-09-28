@@ -163,6 +163,83 @@ class GoogleSheetsService {
     }
   }
 
+  async updateMemberData(values: any[][]): Promise<void> {
+    try {
+      const accessToken = await this.getAccessToken();
+      const range = `${this.sheetName}!A:P`; // Main sheet range
+      
+      const response = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}/values/${range}?valueInputOption=RAW`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            values: values
+          })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to update member data');
+      }
+    } catch (error) {
+      console.error('Error updating member data:', error);
+      throw error;
+    }
+  }
+
+  async updateSingleMember(member: any): Promise<void> {
+    try {
+      // First fetch all current data
+      const currentData = await this.fetchSheetData();
+      if (currentData.length === 0) return;
+
+      const [headers, ...rows] = currentData;
+      
+      // Find the row to update based on unique ID or member ID
+      const memberIndex = rows.findIndex(row => 
+        (member.uniqueId && row[0] === member.uniqueId) || 
+        row[1] === member.memberId
+      );
+
+      if (memberIndex === -1) {
+        throw new Error('Member not found in sheet');
+      }
+
+      // Convert member object to row format (assuming standard column order)
+      const updatedRow = [
+        member.uniqueId || rows[memberIndex][0],
+        member.memberId,
+        member.firstName,
+        member.lastName,
+        member.email,
+        member.membershipName,
+        member.endDate,
+        member.location,
+        member.membershipType,
+        member.daysLeft,
+        member.status,
+        member.totalRevenue || '',
+        member.renewalRevenue || '',
+        member.frequency || '',
+        member.sessionsLeft || '',
+        member.category || ''
+      ];
+
+      // Update the specific row
+      rows[memberIndex] = updatedRow;
+      
+      // Update the entire sheet with modified data
+      await this.updateMemberData([headers, ...rows]);
+    } catch (error) {
+      console.error('Error updating single member:', error);
+      throw error;
+    }
+  }
+
   async saveAnnotation(memberId: string, email: string, comments: string, notes: string, tags: string[], uniqueId?: string, associateName?: string, customTimestamp?: string): Promise<void> {
     try {
       const annotationsData = await this.fetchAnnotations();
