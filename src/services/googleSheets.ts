@@ -211,15 +211,22 @@ class GoogleSheetsService {
 
       // Convert member object to row format matching the current sheet structure:
       // Unique Id, Member ID, First Name, Last Name, Email, Membership Name, End Date, Home Location, Current Usage, Id, Order At, Sold By, Membership Id, Frozen, Paid, Status
+      
+      // CRITICAL FIX: Only update fields that are explicitly provided and not empty
+      // Preserve existing data for any undefined, null, or empty string values
       const updatedRow = [
         member.uniqueId || rows[memberIndex][0] || '', // Unique Id - preserve existing
         member.memberId || rows[memberIndex][1] || '', // Member ID
         member.firstName || rows[memberIndex][2] || '', // First Name
         member.lastName || rows[memberIndex][3] || '', // Last Name
         member.email || rows[memberIndex][4] || '', // Email
-        member.membershipName || rows[memberIndex][5] || '', // Membership Name
+        // CRITICAL: Only update membership name if it's explicitly provided and not empty
+        (member.membershipName !== undefined && member.membershipName !== null && member.membershipName.trim() !== '') 
+          ? member.membershipName : rows[memberIndex][5] || '',
         member.endDate || rows[memberIndex][6] || '', // End Date
-        member.location || rows[memberIndex][7] || '', // Home Location - preserve existing
+        // CRITICAL: Only update location if it's explicitly provided and not empty
+        (member.location !== undefined && member.location !== null && member.location.trim() !== '') 
+          ? member.location : rows[memberIndex][7] || '',
         member.currentUsage || rows[memberIndex][8] || '', // Current Usage - preserve existing
         member.itemId || rows[memberIndex][9] || '', // Id - preserve existing
         member.orderDate || rows[memberIndex][10] || '', // Order At - preserve existing
@@ -229,6 +236,22 @@ class GoogleSheetsService {
         member.paid || rows[memberIndex][14] || '', // Paid - preserve existing
         member.status || rows[memberIndex][15] || 'Active' // Status - preserve existing or default
       ];
+      
+      console.log('📝 [DEBUG] updateSingleMember - Data preservation check:', {
+        memberId: member.memberId,
+        original: {
+          membershipName: rows[memberIndex][5],
+          location: rows[memberIndex][7]
+        },
+        incoming: {
+          membershipName: member.membershipName,
+          location: member.location
+        },
+        final: {
+          membershipName: updatedRow[5],
+          location: updatedRow[7]
+        }
+      });
 
       // Update the specific row
       rows[memberIndex] = updatedRow;
@@ -242,16 +265,40 @@ class GoogleSheetsService {
   }
 
   async saveAnnotation(memberId: string, email: string, comments: string, notes: string, tags: string[], uniqueId?: string, associateName?: string, customTimestamp?: string): Promise<void> {
+    console.log('📝 [DEBUG] saveAnnotation called:', {
+      memberId,
+      email,
+      uniqueId,
+      commentsLength: comments?.length || 0,
+      notesLength: notes?.length || 0,
+      tagsCount: tags?.length || 0
+    });
+    
     try {
       const annotationsData = await this.fetchAnnotations();
+      console.log('📊 [DEBUG] Current annotations data:', {
+        totalRows: annotationsData.length,
+        headers: annotationsData[0] || 'No headers'
+      });
+      
       // Try to find by uniqueId first, then by memberId for backward compatibility
       const existingIndex = annotationsData.findIndex(row => 
         (uniqueId && row[6] === uniqueId) || row[0] === memberId
       );
+      
+      console.log('🔍 [DEBUG] Looking for existing annotation:', {
+        searchingForMemberId: memberId,
+        searchingForUniqueId: uniqueId,
+        existingIndex,
+        found: existingIndex >= 0
+      });
+      
       const timestamp = customTimestamp || new Date().toISOString();
       const tagsString = tags.join(', ');
       
       const newRow = [memberId, email, comments, notes, tagsString, timestamp, uniqueId || '', associateName || ''];
+      
+      console.log('📝 [DEBUG] Prepared annotation row:', newRow);
       
       if (existingIndex >= 0) {
         // Update existing row
