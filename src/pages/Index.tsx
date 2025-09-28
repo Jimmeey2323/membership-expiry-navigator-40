@@ -87,18 +87,25 @@ const DashboardContent = () => {
       )
     );
     
-    // Save to Google Sheets in the background
-    const updatedMember = localMembershipData.find(member => member.memberId === memberId);
-    if (updatedMember) {
-      const memberWithUpdatedAnnotations = { ...updatedMember, comments, notes, tags };
-      googleSheetsService.updateSingleMember(memberWithUpdatedAnnotations)
+    // Save ONLY annotations to the Member_Annotations sheet
+    const member = localMembershipData.find(member => member.memberId === memberId);
+    if (member) {
+      googleSheetsService.saveAnnotation(
+        member.memberId,
+        member.email,
+        comments,
+        notes,
+        tags,
+        member.uniqueId,
+        member.soldBy || '', // associate name
+        new Date().toISOString()
+      )
         .then(() => {
-          console.log('Member annotations updated successfully');
-          // Optionally refetch data to ensure consistency
-          refetch();
+          console.log('Member annotations saved successfully to Member_Annotations sheet');
+          toast.success('Notes and comments saved successfully!');
         })
         .catch(error => {
-          console.error('Failed to save member data to sheets:', error);
+          console.error('Failed to save annotations to Google Sheets:', error);
           toast.error('Failed to save annotations to Google Sheets.');
         });
     }
