@@ -78,6 +78,7 @@ const DashboardContent = () => {
   }
 
     const handleAnnotationUpdate = (memberId: string, comments: string, notes: string, tags: string[]) => {
+    // Update local data immediately
     setLocalMembershipData(prevData => 
       prevData.map(member => 
         member.memberId === memberId 
@@ -90,10 +91,16 @@ const DashboardContent = () => {
     const updatedMember = localMembershipData.find(member => member.memberId === memberId);
     if (updatedMember) {
       const memberWithUpdatedAnnotations = { ...updatedMember, comments, notes, tags };
-      googleSheetsService.updateSingleMember(memberWithUpdatedAnnotations).catch(error => {
-        console.error('Failed to save member data to sheets:', error);
-        // Could show a toast notification here if desired
-      });
+      googleSheetsService.updateSingleMember(memberWithUpdatedAnnotations)
+        .then(() => {
+          console.log('Member annotations updated successfully');
+          // Optionally refetch data to ensure consistency
+          refetch();
+        })
+        .catch(error => {
+          console.error('Failed to save member data to sheets:', error);
+          toast.error('Failed to save annotations to Google Sheets.');
+        });
     }
   };
 
@@ -103,6 +110,7 @@ const DashboardContent = () => {
   };
 
   const handleUpdateMember = (updatedMember: MembershipData) => {
+    // Update local data immediately
     setLocalMembershipData(prev =>
       prev.map(member =>
         member.memberId === updatedMember.memberId ? updatedMember : member
@@ -110,14 +118,19 @@ const DashboardContent = () => {
     );
     
     // Save to Google Sheets to ensure persistence
-    googleSheetsService.updateSingleMember(updatedMember).catch(error => {
-      console.error('Failed to save to Google Sheets:', error);
-      toast.error('Failed to save to Google Sheets. Changes saved locally.');
-    });
+    googleSheetsService.updateSingleMember(updatedMember)
+      .then(() => {
+        // Refetch data after successful update to ensure consistency
+        refetch();
+        toast.success('Member updated successfully!');
+      })
+      .catch(error => {
+        console.error('Failed to save to Google Sheets:', error);
+        toast.error('Failed to save to Google Sheets. Changes saved locally.');
+      });
     
     setShowEditModal(false);
     setSelectedMember(null);
-    toast.success('Member updated successfully!');
   };
 
   const handleAddFollowUp = (followUp: FollowUpEntry) => {
@@ -221,7 +234,15 @@ const DashboardContent = () => {
                 onUpdateMember={handleUpdateMember}
               />
               <Button 
-                onClick={() => refetch()}
+                onClick={async () => {
+                  try {
+                    await refetch();
+                    toast.success('Data refreshed successfully!');
+                  } catch (error) {
+                    console.error('Failed to refresh data:', error);
+                    toast.error('Failed to refresh data. Please try again.');
+                  }
+                }}
                 disabled={isLoading}
                 variant="outline"
                 className="backdrop-blur-sm bg-white/90 border-indigo-200/60 hover:bg-indigo-50 hover:border-indigo-300 transition-all duration-200 shadow-sm"

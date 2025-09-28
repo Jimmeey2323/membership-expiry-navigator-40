@@ -209,24 +209,25 @@ class GoogleSheetsService {
         throw new Error('Member not found in sheet');
       }
 
-      // Convert member object to row format (assuming standard column order)
+      // Convert member object to row format matching the current sheet structure:
+      // Unique Id, Member ID, First Name, Last Name, Email, Membership Name, End Date, Home Location, Current Usage, Id, Order At, Sold By, Membership Id, Frozen, Paid, Status
       const updatedRow = [
-        member.uniqueId || rows[memberIndex][0],
-        member.memberId,
-        member.firstName,
-        member.lastName,
-        member.email,
-        member.membershipName,
-        member.endDate,
-        member.location,
-        member.membershipType,
-        member.daysLeft,
-        member.status,
-        member.totalRevenue || '',
-        member.renewalRevenue || '',
-        member.frequency || '',
-        member.sessionsLeft || '',
-        member.category || ''
+        member.uniqueId || rows[memberIndex][0], // Unique Id
+        member.memberId, // Member ID
+        member.firstName, // First Name
+        member.lastName, // Last Name
+        member.email, // Email
+        member.membershipName, // Membership Name
+        member.endDate, // End Date
+        member.location, // Home Location
+        member.currentUsage || rows[memberIndex][8] || '', // Current Usage
+        member.itemId || rows[memberIndex][9] || '', // Id
+        member.orderDate || rows[memberIndex][10] || '', // Order At
+        member.soldBy || rows[memberIndex][11] || '', // Sold By
+        member.membershipId || rows[memberIndex][12] || '', // Membership Id
+        member.frozen || rows[memberIndex][13] || '', // Frozen
+        member.paid || rows[memberIndex][14] || '', // Paid
+        member.status || 'Active' // Status
       ];
 
       // Update the specific row
