@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -99,16 +99,29 @@ export const EditMemberModal = ({
         const parseDate = (dateStr: string | undefined) => {
           if (!dateStr || dateStr === '') return new Date();
           
-          // Try different date formats
+          // Clean the date string and try different formats
+          const cleanDateStr = dateStr.trim();
+          
+          // Handle various date formats
           const formats = [
-            dateStr,
-            dateStr + 'T00:00:00Z',
-            dateStr + 'T00:00:00',
+            cleanDateStr,
+            cleanDateStr.replace(',', ''), // Remove comma if present
+            cleanDateStr.split(',')[0], // Take only date part before comma
+            cleanDateStr + 'T00:00:00Z',
+            cleanDateStr + 'T00:00:00',
+            cleanDateStr.split(' ')[0], // Take only date part before space
           ];
           
           for (const format of formats) {
             try {
-              const parsed = parseISO(format);
+              // Try parseISO first
+              let parsed = parseISO(format);
+              if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 1900) {
+                return parsed;
+              }
+              
+              // Try Date constructor
+              parsed = new Date(format);
               if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 1900) {
                 return parsed;
               }
@@ -237,6 +250,9 @@ export const EditMemberModal = ({
             <Edit className="h-5 w-5" />
             Edit Member: {member?.firstName || 'Unknown'} {member?.lastName || 'Member'}
           </DialogTitle>
+          <DialogDescription className="text-slate-600">
+            Update member information, membership details, and personal notes.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">

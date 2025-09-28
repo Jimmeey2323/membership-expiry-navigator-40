@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -379,6 +379,9 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                       </p>
                     </div>
                   </DialogTitle>
+                  <DialogDescription className="text-blue-100 text-base mt-2 max-w-lg">
+                    View comprehensive member details, membership history, and analytics.
+                  </DialogDescription>
                   <Button
                     variant="ghost" 
                     size="icon"
