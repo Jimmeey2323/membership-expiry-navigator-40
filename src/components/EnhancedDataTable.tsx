@@ -363,6 +363,23 @@ export const EnhancedDataTable = ({
                                 )}
                               </div>
                             )}
+                            {member.aiTags && member.aiTags.length > 0 && (
+                              <div className="flex items-center gap-1">
+                                {member.aiTags.slice(0, 1).map((tag, index) => (
+                                  <Badge 
+                                    key={index} 
+                                    variant="outline" 
+                                    className="text-xs bg-purple-50 text-purple-700 border-purple-200 px-1 py-0 text-[10px]">
+                                    🤖 {tag}
+                                  </Badge>
+                                ))}
+                                {member.aiTags.length > 1 && (
+                                  <Badge variant="outline" className="text-xs bg-purple-50 text-purple-600 px-1 py-0 text-[10px]">
+                                    +{member.aiTags.length - 1} AI
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
                             {(member.comments || member.notes) && (
                               <div className="flex items-center">
                                 <div className="w-1 h-1 bg-indigo-600 rounded-full"></div>

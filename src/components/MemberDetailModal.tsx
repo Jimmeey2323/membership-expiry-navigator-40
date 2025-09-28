@@ -14,7 +14,7 @@ import {
   X, Plus, Save, User, Mail, Calendar, MapPin, 
   Activity, CreditCard, MessageSquare, FileText, 
   Tag, Clock, TrendingUp, AlertCircle, Star,
-  Phone, Building, Users, Edit2, Check, UserCircle
+  Phone, Building, Users, Edit2, Check, UserCircle, Brain
 } from "lucide-react";
 import { MembershipData } from "@/types/membership";
 import { googleSheetsService } from "@/services/googleSheets";
@@ -692,6 +692,53 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                                 <Badge key={index} variant="outline">{tag}</Badge>
                               ))}
                             </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {/* AI Tags Display */}
+                {member.aiTags && member.aiTags.length > 0 && (
+                  <div className="mt-8">
+                    <Card className="shadow-lg border-2">
+                      <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100">
+                        <CardTitle className="flex items-center gap-3">
+                          <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg">
+                            <Brain className="h-5 w-5" />
+                          </div>
+                          AI Analysis Results
+                          <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                            {member.aiConfidence}% confidence
+                          </Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-6 space-y-4">
+                        <div>
+                          <Label className="text-sm font-semibold text-slate-600">AI-Generated Tags:</Label>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {member.aiTags.map((tag, index) => (
+                              <Badge key={index} className="bg-purple-100 text-purple-800 border-purple-200">
+                                🤖 {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        {member.aiReasoning && (
+                          <div>
+                            <Label className="text-sm font-semibold text-slate-600">AI Reasoning:</Label>
+                            <div className="p-3 bg-purple-50 rounded border border-purple-200 mt-2">
+                              <p className="text-sm text-slate-700">{member.aiReasoning}</p>
+                            </div>
+                          </div>
+                        )}
+                        {member.aiAnalysisDate && (
+                          <div>
+                            <Label className="text-sm font-semibold text-slate-600">Analysis Date:</Label>
+                            <p className="text-sm text-slate-600 mt-1">
+                              {new Date(member.aiAnalysisDate).toLocaleString()}
+                            </p>
                           </div>
                         )}
                       </CardContent>

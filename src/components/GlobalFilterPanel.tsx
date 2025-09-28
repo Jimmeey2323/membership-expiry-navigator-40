@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DateRangePicker } from "@/components/DateRangePicker";
+import { AITagsFilter } from "@/components/AITagsFilter";
 import { useFilters } from "@/contexts/FilterContext";
 import { 
   Filter, 
@@ -215,6 +216,14 @@ export const GlobalFilterPanel = ({ data, className }: GlobalFilterPanelProps) =
                   </div>
                 </div>
               </div>
+
+              {/* AI Tags Filter */}
+              <AITagsFilter
+                data={data}
+                selectedTags={filters.aiTags || []}
+                onTagsChange={(tags) => updateFilter('aiTags', tags)}
+                className="border-0 shadow-none bg-transparent"
+              />
 
               {/* Date Range Filter */}
               <div className="space-y-3">

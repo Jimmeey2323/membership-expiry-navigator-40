@@ -6,10 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnhancedDataTable } from "@/components/EnhancedDataTable";
 import { PremiumCharts } from "@/components/PremiumCharts";
+import { AIAnalytics } from "@/components/AIAnalytics";
 import { GlobalFilterPanel } from "@/components/GlobalFilterPanel";
 import { AddMemberModal } from "@/components/AddMemberModal";
 import { EditMemberModal } from "@/components/EditMemberModal";
 import { FollowUpModal, FollowUpEntry } from "@/components/FollowUpModal";
+import { AIAnalysisModal } from "@/components/AIAnalysisModal";
 import { FilterProvider, useFilters } from "@/contexts/FilterContext";
 import { googleSheetsService } from "@/services/googleSheets";
 import { MembershipData } from "@/types/membership";
@@ -194,6 +196,10 @@ const DashboardContent = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <AIAnalysisModal
+                data={localMembershipData}
+                onUpdateMember={handleUpdateMember}
+              />
               <Button 
                 onClick={() => refetch()}
                 disabled={isLoading}
@@ -406,6 +412,7 @@ const DashboardContent = () => {
 
         <TabsContent value="analytics" className="space-y-6">
           <PremiumCharts data={filteredData} />
+          <AIAnalytics data={localMembershipData} />
         </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">

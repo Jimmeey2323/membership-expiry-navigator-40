@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { AITag } from '@/services/geminiAI';
 
 export interface DateRange {
   start: string;
@@ -20,6 +21,7 @@ export interface GlobalFilters {
   customFilters: string[];
   highValue: boolean;
   lowSessions: boolean;
+  aiTags: AITag[];
 }
 
 interface FilterContextType {
@@ -44,6 +46,7 @@ const defaultFilters: GlobalFilters = {
   customFilters: [],
   highValue: false,
   lowSessions: false,
+  aiTags: [],
 };
 
 const FilterContext = createContext<FilterContextType | undefined>(undefined);
@@ -85,7 +88,8 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
       filters.expiryRange !== 'all' ||
       filters.customFilters.length > 0 ||
       filters.highValue ||
-      filters.lowSessions
+      filters.lowSessions ||
+      filters.aiTags.length > 0
     );
   };
 
@@ -102,6 +106,7 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
     count += filters.customFilters.length;
     if (filters.highValue) count++;
     if (filters.lowSessions) count++;
+    count += filters.aiTags.length;
     return count;
   };
 
@@ -261,6 +266,15 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
               break;
           }
         }
+      }
+
+      // AI Tags filter
+      if (filters.aiTags.length > 0) {
+        const memberAITags = item.aiTags || [];
+        const hasMatchingAITag = filters.aiTags.some(filterTag => 
+          memberAITags.includes(filterTag)
+        );
+        if (!hasMatchingAITag) return false;
       }
 
       return true;
