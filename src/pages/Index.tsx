@@ -257,6 +257,25 @@ const DashboardContent = () => {
                 <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                 Refresh Data
               </Button>
+              <Button 
+                onClick={async () => {
+                  try {
+                    toast.info('Starting data repair process...');
+                    await googleSheetsService.repairCorruptedData();
+                    await refetch(); // Refresh data after repair
+                    toast.success('Data repair completed! Corrupted records have been fixed.');
+                  } catch (error) {
+                    console.error('Failed to repair data:', error);
+                    toast.error('Failed to repair data. Please try again.');
+                  }
+                }}
+                disabled={isLoading}
+                variant="outline"
+                className="backdrop-blur-sm bg-orange-50/90 border-orange-200/60 hover:bg-orange-100 hover:border-orange-300 transition-all duration-200 shadow-sm"
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Repair Data
+              </Button>
             </div>
           </div>
         </div>

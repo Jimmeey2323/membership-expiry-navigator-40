@@ -410,6 +410,112 @@ class GoogleSheetsService {
       }
     ];
   }
+
+  async repairCorruptedData(): Promise<void> {
+    try {
+      console.log('Starting data repair process...');
+      const accessToken = await this.getAccessToken();
+      const range = `${this.sheetName}!A:P`;
+      
+      // Get current sheet data
+      const response = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}/values/${range}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+      const rows = data.values || [];
+      
+      if (rows.length === 0) return;
+
+      const headers = rows[0];
+      const dataRows = rows.slice(1);
+      let repairedCount = 0;
+      
+      // Look for rows with missing membership names or locations
+      for (let i = 0; i < dataRows.length; i++) {
+        const row = dataRows[i];
+        const membershipName = row[5]; // Column F - Membership Name
+        const location = row[7]; // Column H - Home Location
+        const memberId = row[1]; // Column B - Member ID
+        
+        let needsRepair = false;
+        const updatedRow = [...row];
+        
+        // If membership name is empty or missing, try to infer from similar records
+        if (!membershipName || membershipName.trim() === '') {
+          // Try to find a similar record for the same member
+          const similarRecord = dataRows.find(otherRow => 
+            otherRow[1] === memberId && otherRow[5] && otherRow[5].trim() !== ''
+          );
+          
+          if (similarRecord && similarRecord[5]) {
+            updatedRow[5] = similarRecord[5];
+            needsRepair = true;
+            console.log(`Repairing membership name for ${memberId}: ${similarRecord[5]}`);
+          } else {
+            // Default to a common membership type if we can't find similar
+            updatedRow[5] = 'Studio Annual Unlimited';
+            needsRepair = true;
+            console.log(`Setting default membership name for ${memberId}: Studio Annual Unlimited`);
+          }
+        }
+        
+        // If location is empty or missing, try to infer from similar records
+        if (!location || location.trim() === '') {
+          // Try to find a similar record for the same member
+          const similarRecord = dataRows.find(otherRow => 
+            otherRow[1] === memberId && otherRow[7] && otherRow[7].trim() !== ''
+          );
+          
+          if (similarRecord && similarRecord[7]) {
+            updatedRow[7] = similarRecord[7];
+            needsRepair = true;
+            console.log(`Repairing location for ${memberId}: ${similarRecord[7]}`);
+          } else {
+            // Default to a common location if we can't find similar
+            updatedRow[7] = 'Kenkere House';
+            needsRepair = true;
+            console.log(`Setting default location for ${memberId}: Kenkere House`);
+          }
+        }
+        
+        // Update the row if repairs were made
+        if (needsRepair) {
+          const rowRange = `${this.sheetName}!A${i + 2}:P${i + 2}`;
+          
+          await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}/values/${rowRange}?valueInputOption=RAW`,
+            {
+              method: 'PUT',
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                values: [updatedRow],
+              }),
+            }
+          );
+          
+          repairedCount++;
+          
+          // Add a small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      
+      console.log(`Data repair completed. Repaired ${repairedCount} records.`);
+      
+    } catch (error) {
+      console.error('Error during data repair:', error);
+      throw error;
+    }
+  }
 }
 
 export const googleSheetsService = new GoogleSheetsService();
