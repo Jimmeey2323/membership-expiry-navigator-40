@@ -72,6 +72,29 @@ const DashboardContent = () => {
         !m.location || m.location.trim() === ''
       );
       
+      // Check for members with annotations
+      const membersWithAnnotations = (membershipData as MembershipData[]).filter((m: MembershipData) => 
+        (m.comments && m.comments.trim() !== '') || 
+        (m.notes && m.notes.trim() !== '') || 
+        (m.tags && m.tags.length > 0)
+      );
+      
+      if (membersWithAnnotations.length > 0) {
+        console.log('📝 [DEBUG] Members with annotations found:', {
+          count: membersWithAnnotations.length,
+          examples: membersWithAnnotations.slice(0, 3).map(m => ({
+            memberId: m.memberId,
+            name: `${m.firstName} ${m.lastName}`,
+            hasComments: !!m.comments && m.comments.trim() !== '',
+            hasNotes: !!m.notes && m.notes.trim() !== '',
+            hasTags: !!m.tags && m.tags.length > 0,
+            commentsPreview: m.comments ? `"${m.comments.substring(0, 30)}..."` : 'none',
+            notesPreview: m.notes ? `"${m.notes.substring(0, 30)}..."` : 'none',
+            tagCount: m.tags ? m.tags.length : 0
+          }))
+        });
+      }
+      
       if (corruptedRecords.length > 0) {
         console.warn('⚠️ [DEBUG] Found corrupted records:', {
           count: corruptedRecords.length,
@@ -116,14 +139,8 @@ const DashboardContent = () => {
       tags
     });
     
-    // Update local data immediately
-    setLocalMembershipData(prevData => 
-      prevData.map(member => 
-        member.memberId === memberId 
-          ? { ...member, comments, notes, tags }
-          : member
-      )
-    );
+    // Don't update local data immediately - let refetch handle it after save
+    // This prevents conflicts between local state and server state
     
     // Save ONLY annotations to the Member_Annotations sheet
     const member = localMembershipData.find(member => member.memberId === memberId);
@@ -155,7 +172,12 @@ const DashboardContent = () => {
         new Date().toISOString()
       )
         .then(() => {
-          console.log('Member annotations saved successfully to Member_Annotations sheet');
+          console.log('✅ [DEBUG] Member annotations saved successfully to Member_Annotations sheet');
+          // Immediately refetch data to show updated annotations
+          return refetch();
+        })
+        .then(() => {
+          console.log('🔄 [DEBUG] Data refreshed after annotation save');
           toast.success('Notes and comments saved successfully!');
         })
         .catch(error => {

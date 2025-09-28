@@ -337,7 +337,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
         member.uniqueId // Add unique ID for better persistence
       );
       
-      onSave(member.uniqueId || member.memberId, allComments, allNotes, tagsForSaving);
+      onSave(member.memberId, allComments, allNotes, tagsForSaving);
       toast.success("Member details saved successfully!");
       onClose();
     } catch (error) {

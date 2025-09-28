@@ -68,6 +68,15 @@ export const EditMemberModal = ({
   const setOpen = isControlled ? controlledOnOpenChange || (() => {}) : setInternalOpen;
 
   const membershipTypes = [
+    // Actual membership types from your Google Sheets
+    'Studio Annual Unlimited',
+    'Studio 1 Month Unlimited',
+    'Studio 6 Month Unlimited',
+    'Studio 3 Month Unlimited',
+    'Studio 4 Class Package',
+    'Studio 8 Class Package',
+    'Studio 12 Class Package',
+    // Generic types
     'Premium Monthly',
     'Premium Annual',
     'Basic Monthly',
@@ -80,6 +89,11 @@ export const EditMemberModal = ({
   ];
 
   const locations = [
+    // Actual locations from your Google Sheets
+    'Kwality House, Kemps Corner',
+    'Supreme HQ, Bandra',
+    'Kenkere House',
+    // Generic locations
     'Downtown',
     'Westside',
     'Eastside',
@@ -94,6 +108,14 @@ export const EditMemberModal = ({
   // Initialize form data when member changes
   useEffect(() => {
     if (member) {
+      console.log('🔍 [DEBUG] EditMemberModal - Member data received:', {
+        memberId: member.memberId,
+        name: `${member.firstName} ${member.lastName}`,
+        membershipName: member.membershipName,
+        location: member.location,
+        email: member.email
+      });
+      
       try {
         // Safe date parsing with multiple fallbacks
         const parseDate = (dateStr: string | undefined) => {

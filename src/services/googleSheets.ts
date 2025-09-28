@@ -71,9 +71,15 @@ class GoogleSheetsService {
   }
 
   async fetchAnnotations(): Promise<any[][]> {
+    console.log('📋 [DEBUG] fetchAnnotations called');
     try {
       const accessToken = await this.getAccessToken();
-      const range = `${this.annotationsSheetName}!A:G`; // Extended to include Unique ID column
+      const range = `${this.annotationsSheetName}!A:H`; // Extended to include Associate Name column
+      
+      console.log('📋 [DEBUG] Fetching annotations from:', {
+        sheetName: this.annotationsSheetName,
+        range
+      });
       
       const response = await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}/values/${range}`,
@@ -85,16 +91,26 @@ class GoogleSheetsService {
       );
 
       if (!response.ok) {
+        console.log('⚠️ [DEBUG] Annotations sheet not found, creating it...');
         // If sheet doesn't exist, create it
         await this.createAnnotationsSheet();
-        return [['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Last Updated', 'Unique ID']];
+        return [['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Last Updated', 'Unique ID', 'Associate Name']];
       }
 
       const data = await response.json();
-      return data.values || [];
+      const values = data.values || [];
+      
+      console.log('📋 [DEBUG] Annotations fetched:', {
+        totalRows: values.length,
+        hasHeaders: values.length > 0,
+        headers: values[0] || 'No headers',
+        dataRows: values.length - 1
+      });
+      
+      return values;
     } catch (error) {
       console.error('Error fetching annotations:', error);
-      return [['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Last Updated', 'Unique ID']];
+      return [['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Last Updated', 'Unique ID', 'Associate Name']];
     }
   }
 
@@ -128,7 +144,7 @@ class GoogleSheetsService {
 
       // Add headers
       await this.updateAnnotations([
-        ['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Last Updated', 'Unique ID']
+        ['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Last Updated', 'Unique ID', 'Associate Name']
       ]);
     } catch (error) {
       console.error('Error creating annotations sheet:', error);
@@ -136,9 +152,21 @@ class GoogleSheetsService {
   }
 
   async updateAnnotations(values: any[][]): Promise<void> {
+    console.log('💾 [DEBUG] updateAnnotations called:', {
+      totalRows: values.length,
+      hasHeaders: values.length > 0,
+      sampleRow: values.length > 1 ? values[1] : 'No data rows'
+    });
+    
     try {
       const accessToken = await this.getAccessToken();
-      const range = `${this.annotationsSheetName}!A:G`; // Extended to include Unique ID column
+      const range = `${this.annotationsSheetName}!A:H`; // Extended to include Associate Name column
+      
+      console.log('📡 [DEBUG] Sending annotation update request:', {
+        range,
+        sheetName: this.annotationsSheetName,
+        dataRowCount: values.length - 1 // Excluding header
+      });
       
       const response = await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}/values/${range}?valueInputOption=RAW`,
@@ -155,8 +183,16 @@ class GoogleSheetsService {
       );
 
       if (!response.ok) {
-        throw new Error('Failed to update annotations');
+        const errorText = await response.text();
+        console.error('❌ [DEBUG] Annotation update failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText
+        });
+        throw new Error(`Failed to update annotations: ${response.status} ${response.statusText}`);
       }
+      
+      console.log('✅ [DEBUG] Annotations updated successfully');
     } catch (error) {
       console.error('Error updating annotations:', error);
       throw error;
@@ -296,9 +332,23 @@ class GoogleSheetsService {
       const timestamp = customTimestamp || new Date().toISOString();
       const tagsString = tags.join(', ');
       
-      const newRow = [memberId, email, comments, notes, tagsString, timestamp, uniqueId || '', associateName || ''];
+      // Ensure empty values are stored as empty strings, not undefined or null
+      const cleanComments = comments || '';
+      const cleanNotes = notes || '';
+      const cleanTagsString = tagsString || '';
       
-      console.log('📝 [DEBUG] Prepared annotation row:', newRow);
+      const newRow = [memberId, email, cleanComments, cleanNotes, cleanTagsString, timestamp, uniqueId || '', associateName || ''];
+      
+      console.log('📝 [DEBUG] Prepared annotation row:', {
+        memberId,
+        email,
+        comments: `"${cleanComments}"`,
+        notes: `"${cleanNotes}"`,
+        tags: `"${cleanTagsString}"`,
+        commentsEmpty: cleanComments === '',
+        notesEmpty: cleanNotes === '',
+        tagsEmpty: cleanTagsString === ''
+      });
       
       if (existingIndex >= 0) {
         // Update existing row
@@ -353,6 +403,15 @@ class GoogleSheetsService {
             tags: row[4] ? row[4].split(', ').filter(tag => tag.trim()) : []
           };
           
+          console.log('📝 [DEBUG] Processing annotation:', {
+            memberId: row[0],
+            uniqueId: row[6],
+            hasComments: !!annotation.comments,
+            hasNotes: !!annotation.notes,
+            tagCount: annotation.tags.length,
+            commentsPreview: annotation.comments.substring(0, 50)
+          });
+          
           // Map by member ID (for backward compatibility)
           annotationsMap.set(row[0], annotation);
           
@@ -369,6 +428,20 @@ class GoogleSheetsService {
         
         // Try to get annotation by unique ID first, then by member ID
         const annotations = annotationsMap.get(uniqueId) || annotationsMap.get(memberId) || { comments: '', notes: '', tags: [] };
+        
+        // Debug annotation matching for first few members
+        if (rows.indexOf(row) < 3) {
+          console.log(`👤 [DEBUG] Member annotation lookup:`, {
+            memberId,
+            uniqueId,
+            name: `${row[2]} ${row[3]}`,
+            foundAnnotation: !!annotationsMap.get(uniqueId) || !!annotationsMap.get(memberId),
+            annotationSource: annotationsMap.get(uniqueId) ? 'uniqueId' : annotationsMap.get(memberId) ? 'memberId' : 'none',
+            hasComments: !!annotations.comments,
+            hasNotes: !!annotations.notes,
+            tagCount: annotations.tags.length
+          });
+        }
         
         // Map to new data structure:
         // Unique Id, Member ID, First Name, Last Name, Email, Membership Name, End Date, Home Location, Current Usage, Id, Order At, Sold By, Membership Id, Frozen, Paid, Status
@@ -397,80 +470,9 @@ class GoogleSheetsService {
       });
     } catch (error) {
       console.error('Error processing membership data:', error);
-      // Return mock data for development
-      return this.getMockData();
+      // Don't return mock data - throw the error so it can be handled properly
+      throw error;
     }
-  }
-
-  private getMockData() {
-    return [
-      {
-        uniqueId: "15338991-Studio Annual Unlimited-undefined-2026-09-03T12:45:00.000Z",
-        memberId: "15338991",
-        firstName: "Maithili",
-        lastName: "Raut",
-        email: "maithili.raut@gmail.com",
-        membershipName: "Studio Annual Unlimited",
-        endDate: "2026-09-03, 18:15:00",
-        location: "Kwality House, Kemps Corner",
-        currentUsage: "-",
-        itemId: "-",
-        orderDate: "2026-09-03 18:15:00",
-        soldBy: "-",
-        membershipId: "-",
-        frozen: "FALSE",
-        paid: "-",
-        status: "Active" as const,
-        sessionsLeft: 0,
-        comments: "Great member, very consistent with classes.\n[Created by: Admin Admin at 9/20/2025, 10:30:00 AM]---\nAsked about personal training options.\n[Created by: Akshay Rane at 9/21/2025, 2:15:00 PM]",
-        notes: "Prefers morning classes\n[Created by: Manisha Rathod at 9/19/2025, 9:00:00 AM]---\nHas some knee issues, recommend modifications\n[Created by: Prathap Kp at 9/20/2025, 11:45:00 AM]\n[Last edited by: Sheetal Kataria at 9/22/2025, 8:30:00 AM]",
-        tags: ["VIP", "Morning Classes", "Consistent"]
-      },
-      {
-        uniqueId: "23555332-Studio Annual Unlimited-undefined-2026-09-02T04:00:00.000Z",
-        memberId: "23555332",
-        firstName: "Shona",
-        lastName: "Barua",
-        email: "shonabarua27@gmail.com",
-        membershipName: "Studio Annual Unlimited",
-        endDate: "2026-09-02, 09:30:00",
-        location: "Supreme HQ, Bandra",
-        currentUsage: "-",
-        itemId: "-",
-        orderDate: "2026-09-02 09:30:00",
-        soldBy: "-",
-        membershipId: "-",
-        frozen: "FALSE",
-        paid: "-",
-        status: "Active" as const,
-        sessionsLeft: 0,
-        comments: "New member, very enthusiastic!\n[Created by: Imran Shaikh at 9/18/2025, 4:30:00 PM]",
-        notes: "Follows special diet, needs nutritional guidance\n[Created by: Nadiya Shaikh at 9/19/2025, 12:00:00 PM]",
-        tags: ["New Member", "Enthusiastic"]
-      },
-      {
-        uniqueId: "110567-Studio 4 Class Package-39727200-2025-04-12T13:27:43.839Z",
-        memberId: "110567",
-        firstName: "Swathi",
-        lastName: "Mohan",
-        email: "swathimohan05@gmail.com",
-        membershipName: "Studio 4 Class Package",
-        endDate: "25/04/2025 19:30:00",
-        location: "Supreme HQ, Bandra",
-        currentUsage: "3 classes",
-        itemId: "39727200",
-        orderDate: "2025-04-12 18:57:43",
-        soldBy: "imran@physique57mumbai.com",
-        membershipId: "25768",
-        frozen: "-",
-        paid: "6313",
-        status: "Churned" as const,
-        sessionsLeft: 0,
-        comments: "Had to cancel due to work commitments\n[Created by: Pavanthika at 4/25/2025, 6:00:00 PM]",
-        notes: "May rejoin in 6 months when schedule permits\n[Created by: Santhosh Kumar at 4/25/2025, 6:30:00 PM]",
-        tags: ["Work Conflict", "Potential Return"]
-      }
-    ];
   }
 
   async repairCorruptedData(): Promise<void> {
