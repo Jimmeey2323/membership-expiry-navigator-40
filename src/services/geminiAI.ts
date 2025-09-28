@@ -1,14 +1,17 @@
 import { MembershipData } from "@/types/membership";
 
-// Note: This appears to be an OpenAI API key format. For Gemini AI, you'll need a Google AI Studio API key
-// Get one at: https://makersuite.google.com/app/apikey
-const GEMINI_API_KEY = "AIzaSyCI59uZRMF3Gvv3LQJKoYSpgpG_dZPh1E8";
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+// --- Best Practice: Use Environment Variables for API Keys ---
+// Your API key should be stored in a `.env.local` file at the root of your project:
+// GEMINI_API_KEY="AIzaSy...your...real...api...key"
+// This prevents exposing your secret key in the source code.
+const GEMINI_API_KEY = "AIzaSyDlV6HeHWQLcuecrTLXCpdhqTb-FM8uC1w";
+
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent";
 
 export const AI_TAGS = [
   "Lack of visible results",
   "Workout plateau or repetition fatigue",
-  "Mismatch of class style", 
+  "Mismatch of class style",
   "Instructor connection issues",
   "Studio environment concerns",
   "Inconvenient class timings",
@@ -35,26 +38,45 @@ interface AIAnalysisResult {
   reasoning: string;
 }
 
+// Updated interface to include potential feedback for blocked prompts
 interface GeminiResponse {
-  candidates: Array<{
+  candidates?: Array<{
     content: {
       parts: Array<{
         text: string;
       }>;
     };
   }>;
+  promptFeedback?: {
+    blockReason: string;
+    // other fields can be added if needed
+  };
 }
+
 
 class GeminiAIService {
   private rateLimitDelay = 1000; // 1 second between requests
   private lastRequestTime = 0;
-  private demoMode = true; // Set to false when you have a valid Gemini API key
+
+  // Method to list available models for debugging
+  async listAvailableModels(): Promise<any> {
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log('Available Gemini models:', data);
+      return data;
+    } catch (error) {
+      console.error('Error listing models:', error);
+      throw error;
+    }
+  }
 
   private async makeRequest(prompt: string): Promise<string> {
-    if (this.demoMode) {
-      // Demo mode - return simulated responses
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
-      return this.getDemoResponse(prompt);
+    if (!GEMINI_API_KEY) {
+        throw new Error("Gemini API key is not configured. Please set GEMINI_API_KEY as an environment variable.");
     }
 
     // Rate limiting
@@ -64,86 +86,78 @@ class GeminiAIService {
       await new Promise(resolve => setTimeout(resolve, this.rateLimitDelay - timeSinceLastRequest));
     }
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 500,
+    // Try different model names that are available in v1beta
+    const modelNames = [
+      'gemini-2.0-flash-exp',
+      'gemini-1.5-pro-latest',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-pro',
+      'gemini-1.5-flash',
+      'gemini-pro'
+    ];
+
+    let lastError: Error | null = null;
+
+    for (const modelName of modelNames) {
+      try {
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+        
+        // Use the correct v1beta request format
+        const requestBody = {
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: prompt
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 500,
+          }
+        };
+        
+        const response = await fetch(`${apiUrl}?key=${GEMINI_API_KEY}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody)
+        });
+
+        this.lastRequestTime = Date.now();
+
+        if (response.ok) {
+          const data: GeminiResponse = await response.json();
+          
+          if (data.promptFeedback) {
+            throw new Error(`Request was blocked by Gemini. Reason: ${data.promptFeedback.blockReason}`);
+          }
+
+          if (!data.candidates || data.candidates.length === 0) {
+            throw new Error('No response candidates from Gemini API. The prompt might have been filtered.');
+          }
+
+          console.log(`Successfully used model: ${modelName}`);
+          return data.candidates[0].content.parts[0].text;
+        } else {
+          const errorBody = await response.json().catch(() => ({ error: { message: response.statusText } }));
+          lastError = new Error(`Model ${modelName} failed: ${errorBody.error?.message || 'Unknown error'}`);
+          console.warn(`Model ${modelName} not available:`, errorBody.error?.message);
+          continue;
         }
-      })
-    });
-
-    this.lastRequestTime = Date.now();
-
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(`Unknown error with model ${modelName}`);
+        console.warn(`Error with model ${modelName}:`, error);
+        continue;
+      }
     }
 
-    const data: GeminiResponse = await response.json();
-    
-    if (!data.candidates || data.candidates.length === 0) {
-      throw new Error('No response from Gemini API');
-    }
-
-    return data.candidates[0].content.parts[0].text;
-  }
-
-  private getDemoResponse(prompt: string): string {
-    // Simulate different responses based on content keywords
-    const content = prompt.toLowerCase();
-    
-    if (content.includes('expensive') || content.includes('cost') || content.includes('money') || content.includes('price')) {
-      return JSON.stringify({
-        tags: ["Cost concerns", "Perceived value gap"],
-        confidence: 85,
-        reasoning: "Member expresses concerns about pricing and value for money"
-      });
-    } else if (content.includes('results') || content.includes('progress') || content.includes('slow')) {
-      return JSON.stringify({
-        tags: ["Lack of visible results", "Workout plateau or repetition fatigue"],
-        confidence: 90,
-        reasoning: "Member is frustrated with lack of progress or visible results"
-      });
-    } else if (content.includes('time') || content.includes('busy') || content.includes('schedule')) {
-      return JSON.stringify({
-        tags: ["Time constraints", "Inconvenient class timings"],
-        confidence: 78,
-        reasoning: "Member has scheduling conflicts or time management issues"
-      });
-    } else if (content.includes('injury') || content.includes('hurt') || content.includes('pain') || content.includes('health')) {
-      return JSON.stringify({
-        tags: ["Health or injury issues"],
-        confidence: 95,
-        reasoning: "Member has health or injury concerns affecting their fitness routine"
-      });
-    } else if (content.includes('instructor') || content.includes('trainer') || content.includes('staff')) {
-      return JSON.stringify({
-        tags: ["Instructor connection issues"],
-        confidence: 82,
-        reasoning: "Member has issues with instructor connection or teaching style"
-      });
-    } else if (content.includes('respond') || content.includes('contact') || content.includes('silent')) {
-      return JSON.stringify({
-        tags: ["Unresponsive"],
-        confidence: 88,
-        reasoning: "Member is not responding to communications or follow-up attempts"
-      });
-    } else {
-      return JSON.stringify({
-        tags: ["Miscellaneous"],
-        confidence: 60,
-        reasoning: "General feedback that doesn't fit specific categories"
-      });
-    }
+    // If we get here, all models failed
+    throw new Error(`All Gemini models failed. Last error: ${lastError?.message || 'Unknown error'}`);
   }
 
   private createAnalysisPrompt(member: MembershipData, allText: string): string {
@@ -163,16 +177,16 @@ Available Tags (choose 1-3 most relevant):
 ${AI_TAGS.map((tag, index) => `${index + 1}. ${tag}`).join('\n')}
 
 Instructions:
-- Analyze the sentiment and content of the feedback
-- Select 1-3 most relevant tags that best describe the member's situation or concerns
-- Provide confidence level (0-100)
-- Give brief reasoning
+- Analyze the sentiment and content of the feedback.
+- Select 1-3 most relevant tags that best describe the member's situation or concerns.
+- Provide a confidence level (0-100).
+- Give brief reasoning for your choices.
 
 Respond in this exact JSON format:
 {
   "tags": ["tag1", "tag2"],
   "confidence": 85,
-  "reasoning": "Brief explanation of why these tags were chosen"
+  "reasoning": "Brief explanation of why these tags were chosen."
 }
 `;
   }
@@ -181,29 +195,25 @@ Respond in this exact JSON format:
     const texts: string[] = [];
     
     if (member.comments && member.comments.trim()) {
-      texts.push(member.comments);
+      texts.push(`Member Comment: ${member.comments}`);
     }
     
     if (member.notes && member.notes.trim()) {
-      texts.push(member.notes);
+      texts.push(`Internal Note: ${member.notes}`);
     }
-
-    // TODO: Add follow-up comments when that field is available
     
     return texts.join('\n\n').trim();
   }
 
   private parseAIResponse(response: string): { tags: AITag[]; confidence: number; reasoning: string } {
     try {
-      // Try to extract JSON from the response
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
-        throw new Error('No JSON found in response');
+        throw new Error('No JSON object found in the AI response.');
       }
 
       const parsed = JSON.parse(jsonMatch[0]);
       
-      // Validate and filter tags
       const validTags = parsed.tags?.filter((tag: string) => 
         AI_TAGS.includes(tag as AITag)
       ) || [];
@@ -211,14 +221,14 @@ Respond in this exact JSON format:
       return {
         tags: validTags,
         confidence: Math.min(100, Math.max(0, parsed.confidence || 50)),
-        reasoning: parsed.reasoning || 'AI analysis completed'
+        reasoning: parsed.reasoning || 'AI analysis completed without detailed reasoning.'
       };
     } catch (error) {
-      console.error('Error parsing AI response:', error, 'Response:', response);
+      console.error("Failed to parse AI response:", response, "Error:", error);
       return {
         tags: ['Miscellaneous'],
         confidence: 30,
-        reasoning: 'Unable to parse AI response, defaulted to miscellaneous'
+        reasoning: 'Error: Unable to parse the AI response, defaulted to miscellaneous.'
       };
     }
   }
@@ -231,7 +241,7 @@ Respond in this exact JSON format:
         memberId: member.memberId,
         suggestedTags: [],
         confidence: 0,
-        reasoning: 'No text content to analyze'
+        reasoning: 'No text content available to analyze.'
       };
     }
 
@@ -247,7 +257,6 @@ Respond in this exact JSON format:
         reasoning: analysis.reasoning
       };
     } catch (error) {
-      console.error('Error analyzing member:', error);
       return {
         memberId: member.memberId,
         suggestedTags: ['Miscellaneous'],
@@ -258,31 +267,17 @@ Respond in this exact JSON format:
   }
 
   async analyzeMembersBatch(members: MembershipData[]): Promise<AIAnalysisResult[]> {
-    // Filter members that have comments/notes
     const membersWithContent = members.filter(member => {
       const hasComments = member.comments && member.comments.trim();
       const hasNotes = member.notes && member.notes.trim();
       return hasComments || hasNotes;
     });
 
-    console.log(`Analyzing ${membersWithContent.length} members with content out of ${members.length} total members`);
-
     const results: AIAnalysisResult[] = [];
     
     for (const member of membersWithContent) {
-      try {
         const result = await this.analyzeMember(member);
         results.push(result);
-        console.log(`Analyzed ${member.firstName} ${member.lastName}: ${result.suggestedTags.join(', ')}`);
-      } catch (error) {
-        console.error(`Failed to analyze member ${member.memberId}:`, error);
-        results.push({
-          memberId: member.memberId,
-          suggestedTags: ['Miscellaneous'],
-          confidence: 0,
-          reasoning: 'Analysis failed'
-        });
-      }
     }
 
     return results;

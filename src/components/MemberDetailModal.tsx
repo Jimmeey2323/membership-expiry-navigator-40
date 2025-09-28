@@ -19,6 +19,7 @@ import {
 import { MembershipData } from "@/types/membership";
 import { googleSheetsService } from "@/services/googleSheets";
 import { toast } from "sonner";
+import { cleanText, toSentenceCase } from "@/lib/textUtils";
 
 interface MemberDetailModalProps {
   member: MembershipData | null;
@@ -302,9 +303,9 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     
     setIsSaving(true);
     try {
-      // Enhanced format to include creator and editor information
+      // Enhanced format to include creator and editor information with cleaned text
       const allComments = comments.map(c => {
-        let formatted = c.text;
+        let formatted = toSentenceCase(cleanText(c.text));
         if (c.createdBy) {
           formatted += `\n[Created by: ${c.createdBy} at ${c.timestamp.toLocaleString()}]`;
         }
@@ -315,7 +316,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
       }).join('\n---\n');
       
       const allNotes = notes.map(n => {
-        let formatted = n.text;
+        let formatted = toSentenceCase(cleanText(n.text));
         if (n.createdBy) {
           formatted += `\n[Created by: ${n.createdBy} at ${n.timestamp.toLocaleString()}]`;
         }

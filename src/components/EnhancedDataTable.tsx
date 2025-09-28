@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ChevronDown, ChevronUp, Search, ArrowUpDown, Eye, Calendar, Activity, MapPin, User, Crown, Zap, Edit, MessageSquare } from "lucide-react";
 import { MembershipData } from "@/types/membership";
 import { MemberDetailModal } from "./MemberDetailModal";
+import { processTextForDisplay } from "@/lib/textUtils";
 
 interface EnhancedDataTableProps {
   data: MembershipData[];
@@ -239,7 +240,11 @@ export const EnhancedDataTable = ({
                       </Button>
                     </TableHead>
                     
-                    <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[150px] border-none">Tags & Notes</TableHead>
+                    <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[180px] border-none">Comments</TableHead>
+                    
+                    <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[180px] border-none">Notes</TableHead>
+                    
+                    <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[150px] border-none">Tags</TableHead>
                     
                     <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[120px] text-center border-none">Actions</TableHead>
                   </TableRow>
@@ -344,11 +349,73 @@ export const EnhancedDataTable = ({
                           </Badge>
                         </TableCell>
                         
+                        <TableCell className="px-4 py-2 h-[35px] max-w-[180px]">
+                          {(() => {
+                            const processed = processTextForDisplay(member.comments || '');
+                            return processed.formatted.length > 0 ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="text-xs text-gray-700">
+                                    <ul className="list-disc list-inside space-y-1 max-h-16 overflow-hidden">
+                                      {processed.formatted.slice(0, 2).map((item, idx) => (
+                                        <li key={idx} className="truncate">{item}</li>
+                                      ))}
+                                      {processed.formatted.length > 2 && (
+                                        <li className="text-gray-500 italic">+{processed.formatted.length - 2} more...</li>
+                                      )}
+                                    </ul>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <ul className="list-disc list-inside space-y-1">
+                                    {processed.formatted.map((item, idx) => (
+                                      <li key={idx}>{item}</li>
+                                    ))}
+                                  </ul>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <span className="text-xs text-gray-400">-</span>
+                            );
+                          })()}
+                        </TableCell>
+                        
+                        <TableCell className="px-4 py-2 h-[35px] max-w-[180px]">
+                          {(() => {
+                            const processed = processTextForDisplay(member.notes || '');
+                            return processed.formatted.length > 0 ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="text-xs text-gray-700">
+                                    <ul className="list-disc list-inside space-y-1 max-h-16 overflow-hidden">
+                                      {processed.formatted.slice(0, 2).map((item, idx) => (
+                                        <li key={idx} className="truncate">{item}</li>
+                                      ))}
+                                      {processed.formatted.length > 2 && (
+                                        <li className="text-gray-500 italic">+{processed.formatted.length - 2} more...</li>
+                                      )}
+                                    </ul>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <ul className="list-disc list-inside space-y-1">
+                                    {processed.formatted.map((item, idx) => (
+                                      <li key={idx}>{item}</li>
+                                    ))}
+                                  </ul>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <span className="text-xs text-gray-400">-</span>
+                            );
+                          })()}
+                        </TableCell>
+                        
                         <TableCell className="px-4 py-2 h-[35px]">
                           <div className="flex items-center gap-1">
                             {member.tags && member.tags.length > 0 && (
-                              <div className="flex items-center gap-1">
-                                {member.tags.slice(0, 1).map((tag, index) => (
+                              <div className="flex items-center gap-1 flex-wrap">
+                                {member.tags.slice(0, 2).map((tag, index) => (
                                   <Badge 
                                     key={index} 
                                     variant="outline" 
@@ -356,15 +423,15 @@ export const EnhancedDataTable = ({
                                     {tag}
                                   </Badge>
                                 ))}
-                                {member.tags.length > 1 && (
+                                {member.tags.length > 2 && (
                                   <Badge variant="outline" className="text-xs bg-gray-50 text-gray-600 px-1 py-0 text-[10px]">
-                                    +{member.tags.length - 1}
+                                    +{member.tags.length - 2}
                                   </Badge>
                                 )}
                               </div>
                             )}
                             {member.aiTags && member.aiTags.length > 0 && (
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1 flex-wrap">
                                 {member.aiTags.slice(0, 1).map((tag, index) => (
                                   <Badge 
                                     key={index} 
@@ -380,10 +447,8 @@ export const EnhancedDataTable = ({
                                 )}
                               </div>
                             )}
-                            {(member.comments || member.notes) && (
-                              <div className="flex items-center">
-                                <div className="w-1 h-1 bg-indigo-600 rounded-full"></div>
-                              </div>
+                            {!member.tags?.length && !member.aiTags?.length && (
+                              <span className="text-xs text-gray-400">-</span>
                             )}
                           </div>
                         </TableCell>
