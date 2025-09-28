@@ -25,6 +25,8 @@ export interface MembershipData {
   aiAnalysisDate?: string;
   aiConfidence?: number;
   aiReasoning?: string;
+  aiSentiment?: string;
+  aiChurnRisk?: string;
   // Legacy field for backward compatibility
   sessionsLeft?: number;
 }

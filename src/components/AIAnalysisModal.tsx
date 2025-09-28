@@ -38,6 +38,8 @@ interface AnalysisProgress {
     suggestedTags: AITag[];
     confidence: number;
     reasoning: string;
+    sentiment?: string;
+    churnRisk?: string;
   }>;
 }
 
@@ -94,7 +96,9 @@ export const AIAnalysisModal = ({ data, onUpdateMember, trigger }: AIAnalysisMod
               aiTags: analysis.suggestedTags,
               aiAnalysisDate: new Date().toISOString(),
               aiConfidence: analysis.confidence,
-              aiReasoning: analysis.reasoning
+              aiReasoning: analysis.reasoning,
+              aiSentiment: analysis.sentiment || 'neutral',
+              aiChurnRisk: analysis.churnRisk || 'medium'
             };
             
             onUpdateMember(updatedMember);
@@ -105,7 +109,9 @@ export const AIAnalysisModal = ({ data, onUpdateMember, trigger }: AIAnalysisMod
             memberName: `${member.firstName} ${member.lastName}`,
             suggestedTags: analysis.suggestedTags,
             confidence: analysis.confidence,
-            reasoning: analysis.reasoning
+            reasoning: analysis.reasoning,
+            sentiment: analysis.sentiment || 'neutral',
+            churnRisk: analysis.churnRisk || 'medium'
           });
 
           completedCount++;
@@ -122,7 +128,9 @@ export const AIAnalysisModal = ({ data, onUpdateMember, trigger }: AIAnalysisMod
             memberName: `${member.firstName} ${member.lastName}`,
             suggestedTags: ['Miscellaneous'],
             confidence: 0,
-            reasoning: 'Analysis failed'
+            reasoning: 'Analysis failed',
+            sentiment: 'neutral',
+            churnRisk: 'high'
           });
           completedCount++;
         }
@@ -184,11 +192,30 @@ export const AIAnalysisModal = ({ data, onUpdateMember, trigger }: AIAnalysisMod
     return colorMap[tag] || 'bg-gray-100 text-gray-800';
   };
 
+  const getSentimentColor = (sentiment: string): string => {
+    const colorMap: Record<string, string> = {
+      'positive': 'bg-green-100 text-green-700',
+      'neutral': 'bg-gray-100 text-gray-700',
+      'negative': 'bg-red-100 text-red-700',
+      'mixed': 'bg-yellow-100 text-yellow-700'
+    };
+    return colorMap[sentiment] || 'bg-gray-100 text-gray-700';
+  };
+
+  const getChurnRiskColor = (churnRisk: string): string => {
+    const colorMap: Record<string, string> = {
+      'low': 'bg-green-50 text-green-600 border-green-200',
+      'medium': 'bg-orange-50 text-orange-600 border-orange-200',
+      'high': 'bg-red-50 text-red-600 border-red-200'
+    };
+    return colorMap[churnRisk] || 'bg-gray-50 text-gray-600 border-gray-200';
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button variant="outline" className="bg-gradient-to-r from-purple-500 to-blue-600 text-white hover:from-purple-600 hover:to-blue-700">
+          <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg border-0 backdrop-blur-sm">
             <Brain className="h-4 w-4 mr-2" />
             AI Analysis
           </Button>
@@ -329,7 +356,21 @@ export const AIAnalysisModal = ({ data, onUpdateMember, trigger }: AIAnalysisMod
                     {progress.results.map((result, index) => (
                       <div key={result.memberId} className="p-4 border rounded-lg">
                         <div className="flex items-start justify-between mb-2">
-                          <h4 className="font-medium">{result.memberName}</h4>
+                          <div>
+                            <h4 className="font-medium">{result.memberName}</h4>
+                            <div className="flex items-center gap-2 mt-1">
+                              {result.sentiment && (
+                                <Badge variant="secondary" className={`text-xs ${getSentimentColor(result.sentiment)}`}>
+                                  {result.sentiment}
+                                </Badge>
+                              )}
+                              {result.churnRisk && (
+                                <Badge variant="outline" className={`text-xs ${getChurnRiskColor(result.churnRisk)}`}>
+                                  {result.churnRisk} risk
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
                           <Badge variant="outline" className="text-xs">
                             {result.confidence}% confidence
                           </Badge>

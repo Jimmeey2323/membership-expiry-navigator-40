@@ -39,6 +39,45 @@ export const EnhancedDataTable = ({
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const itemsPerPage = 12;
 
+  // Helper functions for AI analysis styling
+  const getSentimentColorClasses = (sentiment: string): string => {
+    const colorMap: Record<string, string> = {
+      'positive': 'bg-green-50 text-green-600 border-green-200',
+      'neutral': 'bg-gray-50 text-gray-600 border-gray-200',
+      'negative': 'bg-red-50 text-red-600 border-red-200',
+      'mixed': 'bg-yellow-50 text-yellow-600 border-yellow-200'
+    };
+    return colorMap[sentiment] || 'bg-gray-50 text-gray-600 border-gray-200';
+  };
+
+  const getSentimentEmoji = (sentiment: string): string => {
+    const emojiMap: Record<string, string> = {
+      'positive': '😊',
+      'neutral': '😐',
+      'negative': '😞',
+      'mixed': '🤔'
+    };
+    return emojiMap[sentiment] || '😐';
+  };
+
+  const getChurnRiskColorClasses = (churnRisk: string): string => {
+    const colorMap: Record<string, string> = {
+      'low': 'bg-green-50 text-green-600 border-green-200',
+      'medium': 'bg-orange-50 text-orange-600 border-orange-200',
+      'high': 'bg-red-50 text-red-600 border-red-200'
+    };
+    return colorMap[churnRisk] || 'bg-gray-50 text-gray-600 border-gray-200';
+  };
+
+  const getChurnRiskEmoji = (churnRisk: string): string => {
+    const emojiMap: Record<string, string> = {
+      'low': '🟢',
+      'medium': '🟡',
+      'high': '🔴'
+    };
+    return emojiMap[churnRisk] || '⚪';
+  };
+
   const filteredAndSortedData = useMemo(() => {
     let filtered = data.filter(item => 
       Object.values(item).some(value => 
@@ -445,6 +484,20 @@ export const EnhancedDataTable = ({
                                     +{member.aiTags.length - 1} AI
                                   </Badge>
                                 )}
+                                
+                                {/* Sentiment and Churn Risk Indicators */}
+                                <div className="flex items-center gap-1 mt-1">
+                                  {member.aiSentiment && member.aiSentiment !== 'neutral' && (
+                                    <Badge variant="secondary" className={`text-[9px] px-1 py-0 ${getSentimentColorClasses(member.aiSentiment)}`}>
+                                      {getSentimentEmoji(member.aiSentiment)} {member.aiSentiment}
+                                    </Badge>
+                                  )}
+                                  {member.aiChurnRisk && member.aiChurnRisk !== 'medium' && (
+                                    <Badge variant="outline" className={`text-[9px] px-1 py-0 ${getChurnRiskColorClasses(member.aiChurnRisk)}`}>
+                                      {getChurnRiskEmoji(member.aiChurnRisk)} {member.aiChurnRisk}
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
                             )}
                             {!member.tags?.length && !member.aiTags?.length && (

@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnhancedDataTable } from "@/components/EnhancedDataTable";
+import { GroupableDataTable } from "@/components/GroupableDataTable";
+import { MetricsDashboard } from "@/components/MetricsDashboard";
 import { PremiumCharts } from "@/components/PremiumCharts";
 import { AIAnalytics } from "@/components/AIAnalytics";
 import { GlobalFilterPanel } from "@/components/GlobalFilterPanel";
@@ -293,147 +295,8 @@ const DashboardContent = () => {
           </div>
         </div>
 
-        {/* Organized Dashboard Grid Layout */}
-        <div className="space-y-6">
-          {/* Metrics Grid - Clean 4-column layout */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="relative overflow-hidden backdrop-blur-xl bg-white/95 border-white/30 shadow-lg hover:shadow-xl transition-all duration-200 group">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-              <CardHeader className="pb-2 pt-4 px-4 relative">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Total Members</CardTitle>
-                  <div className="p-1.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-md shadow-sm">
-                    <Users className="h-4 w-4 text-white" />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="px-4 pb-4 pt-1 relative">
-                <div className="text-2xl font-bold text-slate-900 mb-1">{totalMembers.toLocaleString()}</div>
-                <div className="flex items-center">
-                  <TrendingUp className="h-3 w-3 text-emerald-600 mr-1" />
-                  <span className="text-xs font-medium text-emerald-600">+12% from last month</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="relative overflow-hidden backdrop-blur-xl bg-white/95 border-white/30 shadow-lg hover:shadow-xl transition-all duration-200 group">
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-              <CardHeader className="pb-2 pt-4 px-4 relative">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Active Members</CardTitle>
-                  <div className="p-1.5 bg-gradient-to-r from-emerald-500 to-green-500 rounded-md shadow-sm">
-                    <UserCheck className="h-4 w-4 text-white" />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="px-4 pb-4 pt-1 relative">
-                <div className="text-2xl font-bold text-slate-900 mb-1">{activeMembers.length.toLocaleString()}</div>
-                <div className="flex items-center">
-                  <TrendingUp className="h-3 w-3 text-emerald-600 mr-1" />
-                  <span className="text-xs font-medium text-emerald-600">+5% from last month</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="relative overflow-hidden backdrop-blur-xl bg-white/95 border-white/30 shadow-lg hover:shadow-xl transition-all duration-200 group">
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-              <CardHeader className="pb-2 pt-4 px-4 relative">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Expiring Soon</CardTitle>
-                  <div className="p-1.5 bg-gradient-to-r from-orange-500 to-amber-500 rounded-md shadow-sm">
-                    <AlertTriangle className="h-4 w-4 text-white" />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="px-4 pb-4 pt-1 relative">
-                <div className="text-2xl font-bold text-slate-900 mb-1">{expiringMembers.length.toLocaleString()}</div>
-                <div className="flex items-center">
-                  <Calendar className="h-3 w-3 text-orange-600 mr-1" />
-                  <span className="text-xs font-medium text-orange-600">Next 30 days</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="relative overflow-hidden backdrop-blur-xl bg-white/95 border-white/30 shadow-lg hover:shadow-xl transition-all duration-200 group">
-              <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-rose-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-              <CardHeader className="pb-2 pt-4 px-4 relative">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Churned</CardTitle>
-                  <div className="p-1.5 bg-gradient-to-r from-red-500 to-rose-500 rounded-md shadow-sm">
-                    <UserX className="h-4 w-4 text-white" />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="px-4 pb-4 pt-1 relative">
-                <div className="text-2xl font-bold text-slate-900 mb-1">{churnedMembers.length.toLocaleString()}</div>
-                <div className="flex items-center">
-                  <TrendingDown className="h-3 w-3 text-red-600 mr-1" />
-                  <span className="text-xs font-medium text-red-600">-3% from last month</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Quick Actions Grid - Optimized layout */}
-          <Card className="relative overflow-hidden backdrop-blur-xl bg-white/95 border-white/30 shadow-lg">
-            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/3 via-purple-500/3 to-indigo-500/3"></div>
-            <CardHeader className="pb-3 pt-4 px-6 relative">
-              <div className="flex items-center gap-3">
-                <div className="p-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-md shadow-sm">
-                  <Activity className="h-4 w-4 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg font-bold text-slate-900">Quick Actions</CardTitle>
-                  <CardDescription className="text-slate-600 text-sm">
-                    Efficient member management tools
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="px-6 pb-6 relative">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {quickActions.map((action) => {
-                  const Icon = action.icon;
-                  
-                  // Special handling for Add Member button
-                  if (action.name === 'Add Member') {
-                    return (
-                      <AddMemberModal
-                        key={action.name}
-                        onAddMember={handleAddMember}
-                        trigger={
-                          <Button
-                            variant="outline"
-                            className="h-20 flex flex-col items-center gap-2.5 hover:scale-[1.02] transition-all duration-200 backdrop-blur-sm bg-white/90 border-indigo-200/50 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-600 hover:text-white hover:border-transparent hover:shadow-md group"
-                          >
-                            <div className="p-2 bg-gradient-to-r from-indigo-100 to-purple-100 group-hover:from-white/20 group-hover:to-white/20 rounded-lg transition-all duration-200">
-                              <Icon className="h-4 w-4 text-indigo-600 group-hover:text-white transition-colors" />
-                            </div>
-                            <span className="text-xs font-semibold group-hover:text-white transition-colors text-center">{action.name}</span>
-                          </Button>
-                        }
-                      />
-                    );
-                  }
-                  
-                  return (
-                    <Button
-                      key={action.name}
-                      onClick={action.action}
-                      variant="outline"
-                      className="h-20 flex flex-col items-center gap-2.5 hover:scale-[1.02] transition-all duration-200 backdrop-blur-sm bg-white/90 border-indigo-200/50 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-600 hover:text-white hover:border-transparent hover:shadow-md group"
-                    >
-                      <div className="p-2 bg-gradient-to-r from-indigo-100 to-purple-100 group-hover:from-white/20 group-hover:to-white/20 rounded-lg transition-all duration-200">
-                        <Icon className="h-4 w-4 text-indigo-600 group-hover:text-white transition-colors" />
-                      </div>
-                      <span className="text-xs font-semibold group-hover:text-white transition-colors text-center">{action.name}</span>
-                    </Button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Metrics Dashboard */}
+        <MetricsDashboard data={filteredData} />
 
         {/* Ultra-Modern Content Tabs */}
         <Tabs defaultValue="members" className="space-y-6">
@@ -478,7 +341,7 @@ const DashboardContent = () => {
           </div>
 
         <TabsContent value="members" className="space-y-6">
-          <EnhancedDataTable
+          <GroupableDataTable
             data={filteredData}
             title="Member Management"
             onAnnotationUpdate={handleAnnotationUpdate}

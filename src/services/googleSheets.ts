@@ -209,7 +209,27 @@ class GoogleSheetsService {
         throw new Error('Member not found in sheet');
       }
 
-      const updatedRow = [
+      // If this is an annotation-only update, preserve all other data
+      const updatedRow = member._annotationOnly ? [
+        rows[memberIndex][0] || '', // Preserve existing uniqueId
+        rows[memberIndex][1] || '', // Preserve existing memberId  
+        rows[memberIndex][2] || '', // Preserve existing firstName
+        rows[memberIndex][3] || '', // Preserve existing lastName
+        rows[memberIndex][4] || '', // Preserve existing email
+        rows[memberIndex][5] || '', // Preserve existing membershipName
+        rows[memberIndex][6] || '', // Preserve existing endDate
+        rows[memberIndex][7] || '', // Preserve existing location
+        rows[memberIndex][8] || '', // Preserve existing currentUsage
+        rows[memberIndex][9] || '', // Preserve existing itemId
+        rows[memberIndex][10] || '', // Preserve existing orderDate
+        rows[memberIndex][11] || '', // Preserve existing soldBy
+        rows[memberIndex][12] || '', // Preserve existing membershipId
+        rows[memberIndex][13] || '', // Preserve existing frozen
+        rows[memberIndex][14] || '', // Preserve existing paid
+        rows[memberIndex][15] || 'Active', // Preserve existing status
+        member.comments || rows[memberIndex][16] || '', // Update comments
+        member.notes || rows[memberIndex][17] || '' // Update notes
+      ] : [
         member.uniqueId || rows[memberIndex][0] || '',
         member.memberId || rows[memberIndex][1] || '',
         member.firstName || rows[memberIndex][2] || '',
@@ -242,6 +262,7 @@ class GoogleSheetsService {
 
   async saveAnnotation(memberId: string, email: string, comments: string, notes: string, tags: string[], uniqueId?: string, associateName?: string, customTimestamp?: string): Promise<void> {
     try {
+      // Save to Member_Annotations sheet first
       const annotationsData = await this.fetchAnnotations();
       
       const existingIndex = annotationsData.findIndex((row, index) => 
@@ -267,6 +288,16 @@ class GoogleSheetsService {
       }
       
       await this.updateAnnotations(annotationsData);
+      
+      // Also update the main Expirations sheet to keep both in sync
+      await this.updateSingleMember({
+        memberId,
+        comments,
+        notes,
+        // Don't overwrite other fields, just update annotations
+        _annotationOnly: true
+      });
+      
     } catch (error) {
       console.error('Error saving annotation:', error);
       throw error;
@@ -395,6 +426,30 @@ class GoogleSheetsService {
       }
     } catch (error) {
       console.error('Error during data repair:', error);
+    }
+  }
+
+  // Method to clear AI tags for a member
+  async clearAITags(memberId: string): Promise<void> {
+    try {
+      const currentData = await this.fetchSheetData();
+      if (currentData.length === 0) return;
+
+      const [headers, ...rows] = currentData;
+      
+      const memberIndex = rows.findIndex(row => row[1] === memberId);
+      if (memberIndex === -1) {
+        throw new Error('Member not found in sheet');
+      }
+
+      // Clear AI tags column (assuming it's column S - index 18)
+      if (rows[memberIndex][18]) {
+        rows[memberIndex][18] = '';
+        await this.updateMemberData([headers, ...rows]);
+      }
+    } catch (error) {
+      console.error('Error clearing AI tags:', error);
+      throw error;
     }
   }
 }

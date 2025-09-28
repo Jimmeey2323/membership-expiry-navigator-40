@@ -3,10 +3,32 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ChevronDown, ChevronUp, Search, ArrowUpDown, Eye, Calendar, Activity, MapPin, User, Crown, Zap, Group, BarChart3, Layers } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { 
+  ChevronDown, 
+  ChevronUp, 
+  ChevronRight, 
+  Search, 
+  ArrowUpDown, 
+  Eye, 
+  Calendar, 
+  Activity, 
+  MapPin, 
+  User, 
+  Crown, 
+  Zap, 
+  Edit, 
+  MessageSquare,
+  Layers,
+  Users,
+  BarChart3,
+  Tag,
+  FileText
+} from "lucide-react";
+import { processTextForDisplay } from "@/lib/textUtils";
 import { MembershipData } from "@/types/membership";
 import { MemberDetailModal } from "./MemberDetailModal";
 
@@ -15,6 +37,8 @@ interface GroupableDataTableProps {
   title: string;
   className?: string;
   onAnnotationUpdate?: (memberId: string, comments: string, notes: string, tags: string[]) => void;
+  onEditMember?: (member: MembershipData) => void;
+  onFollowUpMember?: (member: MembershipData) => void;
 }
 
 type SortField = keyof MembershipData;
@@ -25,7 +49,9 @@ export const GroupableDataTable = ({
   data,
   title,
   className = '',
-  onAnnotationUpdate
+  onAnnotationUpdate,
+  onEditMember,
+  onFollowUpMember
 }: GroupableDataTableProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<SortField>('endDate');
@@ -35,7 +61,91 @@ export const GroupableDataTable = ({
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [groupBy, setGroupBy] = useState<GroupByField>('none');
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  const itemsPerPage = 12;
+  const itemsPerPage = 25;
+
+  // Helper functions for AI analysis styling
+  const getSentimentColorClasses = (sentiment: string): string => {
+    const colorMap: Record<string, string> = {
+      'positive': 'bg-green-50 text-green-600 border-green-200',
+      'neutral': 'bg-gray-50 text-gray-600 border-gray-200',
+      'negative': 'bg-red-50 text-red-600 border-red-200',
+      'mixed': 'bg-yellow-50 text-yellow-600 border-yellow-200'
+    };
+    return colorMap[sentiment] || 'bg-gray-50 text-gray-600 border-gray-200';
+  };
+
+  const getSentimentEmoji = (sentiment: string): string => {
+    const emojiMap: Record<string, string> = {
+      'positive': '😊',
+      'neutral': '😐',
+      'negative': '😞',
+      'mixed': '🤔'
+    };
+    return emojiMap[sentiment] || '😐';
+  };
+
+  const getChurnRiskColorClasses = (churnRisk: string): string => {
+    const colorMap: Record<string, string> = {
+      'low': 'bg-green-50 text-green-600 border-green-200',
+      'medium': 'bg-orange-50 text-orange-600 border-orange-200',
+      'high': 'bg-red-50 text-red-600 border-red-200'
+    };
+    return colorMap[churnRisk] || 'bg-gray-50 text-gray-600 border-gray-200';
+  };
+
+  const getChurnRiskEmoji = (churnRisk: string): string => {
+    const emojiMap: Record<string, string> = {
+      'low': '🟢',
+      'medium': '🟡',
+      'high': '🔴'
+    };
+    return emojiMap[churnRisk] || '⚪';
+  };
+
+  const formatDate = (dateString: string): string => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    const dayName = days[date.getDay()];
+    const year = date.getFullYear();
+    return `${dayName}-${year}`;
+  };
+
+  const getDaysUntilExpiry = (endDate: string): number => {
+    if (!endDate) return 999;
+    const today = new Date();
+    const expiry = new Date(endDate);
+    const diffTime = expiry.getTime() - today.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const getMembershipIcon = (membershipName: string) => {
+    if (membershipName?.toLowerCase().includes('premium') || membershipName?.toLowerCase().includes('unlimited')) {
+      return <Crown className="h-3 w-3 text-yellow-600" />;
+    }
+    if (membershipName?.toLowerCase().includes('basic')) {
+      return <User className="h-3 w-3 text-slate-600" />;
+    }
+    return <Zap className="h-3 w-3 text-blue-600" />;
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      'Active': { color: 'bg-green-500 text-white', icon: <Zap className="h-3 w-3" /> },
+      'Churned': { color: 'bg-red-500 text-white', icon: <User className="h-3 w-3" /> },
+      'Frozen': { color: 'bg-blue-500 text-white', icon: <Activity className="h-3 w-3" /> }
+    };
+    
+    const config = statusConfig[status as keyof typeof statusConfig] || 
+                   { color: 'bg-gray-500 text-white', icon: <User className="h-3 w-3" /> };
+    
+    return (
+      <Badge className={`${config.color} text-xs font-bold border-0 px-2 py-1 h-5 flex items-center gap-1`}>
+        {config.icon}
+        <span className="text-xs">{status}</span>
+      </Badge>
+    );
+  };
 
   const filteredAndSortedData = useMemo(() => {
     let filtered = data.filter(item => 
@@ -122,29 +232,12 @@ export const GroupableDataTable = ({
     setIsDetailModalOpen(true);
   };
 
-  const handleAnnotationSave = (memberId: string, comments: string, notes: string, tags: string[]) => {
+    const handleAnnotationSave = (memberId: string, comments: string, notes: string, tags: string[]) => {
     if (onAnnotationUpdate) {
       onAnnotationUpdate(memberId, comments, notes, tags);
     }
     setIsDetailModalOpen(false);
     setSelectedMember(null);
-  };
-
-  const getDaysUntilExpiry = (endDate: string) => {
-    const today = new Date();
-    const expiry = new Date(endDate);
-    const diffTime = expiry.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
-
-  const getMembershipIcon = (membershipName: string) => {
-    if (membershipName?.toLowerCase().includes('premium') || membershipName?.toLowerCase().includes('unlimited')) {
-      return <Crown className="h-4 w-4 text-yellow-600" />;
-    }
-    if (membershipName?.toLowerCase().includes('basic')) {
-      return <User className="h-4 w-4 text-slate-600" />;
-    }
-    return <Zap className="h-4 w-4 text-blue-600" />;
   };
 
   const getGroupColor = (groupName: string, index: number = 0) => {
@@ -223,7 +316,7 @@ export const GroupableDataTable = ({
               <div className="flex items-center gap-6">
                 {/* Group By Selector */}
                 <div className="flex items-center gap-2">
-                  <Group className="h-5 w-5 text-slate-600" />
+                  <Users className="h-5 w-5 text-slate-600" />
                   <Select value={groupBy} onValueChange={(value: GroupByField) => setGroupBy(value)}>
                     <SelectTrigger className="w-48 bg-white/80 backdrop-blur-sm border-slate-300 focus:border-blue-500">
                       <SelectValue placeholder="Group by..." />
@@ -323,195 +416,228 @@ export const GroupableDataTable = ({
                       <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 via-transparent to-purple-50/30"></div>
                       <Table>
                         <TableHeader>
-                          <TableRow className="bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 border-b-2 border-slate-200">
-                            <TableHead className="text-slate-800 font-bold text-sm h-16 px-6">
+                          <TableRow className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 border-b-2 border-slate-600 h-12">
+                            <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap">
                               <Button 
                                 variant="ghost" 
-                                className="h-auto p-0 font-bold text-slate-800 hover:text-blue-600"
+                                className="h-auto p-0 font-bold text-white hover:text-blue-200 text-xs"
                                 onClick={() => handleSort('memberId')}
                               >
-                                <User className="h-4 w-4 mr-2" />
-                                Member ID {getSortIcon('memberId')}
+                                <User className="h-3 w-3 mr-1" />
+                                ID {getSortIcon('memberId')}
                               </Button>
                             </TableHead>
-                            <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 min-w-[200px]">
+                            <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap min-w-[180px]">
                               <Button 
                                 variant="ghost" 
-                                className="h-auto p-0 font-bold text-slate-800 hover:text-blue-600"
+                                className="h-auto p-0 font-bold text-white hover:text-blue-200 text-xs"
                                 onClick={() => handleSort('firstName')}
                               >
-                                Member Name {getSortIcon('firstName')}
+                                Member {getSortIcon('firstName')}
                               </Button>
                             </TableHead>
-                            <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 min-w-[250px]">Email</TableHead>
-                            <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 min-w-[280px]">
-                              <Button 
-                                variant="ghost" 
-                                className="h-auto p-0 font-bold text-slate-800 hover:text-blue-600"
-                                onClick={() => handleSort('membershipName')}
-                              >
-                                Membership Type {getSortIcon('membershipName')}
-                              </Button>
+                            <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap min-w-[120px]">
+                              <Crown className="h-3 w-3 mr-1 inline" />
+                              Membership
                             </TableHead>
-                            <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 min-w-[150px]">
-                              <Button 
-                                variant="ghost" 
-                                className="h-auto p-0 font-bold text-slate-800 hover:text-blue-600"
-                                onClick={() => handleSort('endDate')}
-                              >
-                                <Calendar className="h-4 w-4 mr-2" />
-                                End Date {getSortIcon('endDate')}
-                              </Button>
+                            <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap min-w-[80px]">
+                              <Zap className="h-3 w-3 mr-1 inline" />
+                              Status
                             </TableHead>
-                            <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 min-w-[180px]">
-                              <MapPin className="h-4 w-4 mr-2 inline" />
+                            <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap min-w-[100px]">
+                              <Calendar className="h-3 w-3 mr-1 inline" />
+                              End Date
+                            </TableHead>
+                            <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap min-w-[100px]">
+                              <MapPin className="h-3 w-3 mr-1 inline" />
                               Location
                             </TableHead>
-                            <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 text-center min-w-[120px]">
-                              <Button 
-                                variant="ghost" 
-                                className="h-auto p-0 font-bold text-slate-800 hover:text-blue-600"
-                                onClick={() => handleSort('status')}
-                              >
-                                Status {getSortIcon('status')}
-                              </Button>
+                            <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap min-w-[120px]">
+                              <MessageSquare className="h-3 w-3 mr-1 inline" />
+                              Comments
                             </TableHead>
-                            <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 min-w-[150px]">Current Usage</TableHead>
-                            <TableHead className="text-slate-800 font-bold text-sm h-16 px-6 min-w-[150px]">Comments & Notes</TableHead>
+                            <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap min-w-[120px]">
+                              <FileText className="h-3 w-3 mr-1 inline" />
+                              Notes
+                            </TableHead>
+                            <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap min-w-[100px]">
+                              <Tag className="h-3 w-3 mr-1 inline" />
+                              Tags
+                            </TableHead>
+                            <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap w-16">
+                              Actions
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         
-                        <TableBody>
-                          {members.slice(0, itemsPerPage).map((member) => {
+                        <TableBody className="bg-white divide-y divide-slate-100">
+                          {members.map((member, index) => {
                             const daysUntilExpiry = getDaysUntilExpiry(member.endDate);
                             const isExpiringSoon = daysUntilExpiry <= 30 && daysUntilExpiry > 0;
-                            const isChurned = member.status === 'Churned';
+                            const isExpired = daysUntilExpiry < 0;
                             
                             return (
                               <TableRow 
                                 key={member.uniqueId}
-                                className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-blue-50/50 hover:via-white hover:to-purple-50/50 transition-all duration-300 cursor-pointer group h-20"
+                                className="hover:bg-slate-50/80 transition-all duration-200 cursor-pointer h-[35px] border-b border-slate-100"
                                 onClick={() => handleRowClick(member)}
                               >
-                                <TableCell className="px-6 py-6">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center font-bold text-blue-700 text-sm">
-                                      {member.firstName.charAt(0)}{member.lastName.charAt(0)}
-                                    </div>
-                                    <span className="font-mono text-slate-700 font-semibold">{member.memberId}</span>
-                                  </div>
-                                </TableCell>
-                                
-                                <TableCell className="px-6 py-6">
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex flex-col">
-                                      <span className="font-semibold text-slate-900 text-base">
-                                        {member.firstName} {member.lastName}
-                                      </span>
-                                      <span className="text-slate-500 text-sm">
-                                        ID: {member.memberId}
-                                      </span>
-                                    </div>
-                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                      <Eye className="h-4 w-4 text-blue-600" />
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                
-                                <TableCell className="px-6 py-6">
-                                  <span className="text-slate-700 font-medium">{member.email}</span>
-                                </TableCell>
-                                
-                                <TableCell className="px-6 py-6">
+                                <TableCell className="px-4 py-1 h-[35px]">
                                   <div className="flex items-center gap-2">
-                                    {getMembershipIcon(member.membershipName)}
-                                    <Tooltip>
-                                      <TooltipTrigger>
-                                        <span className="text-slate-700 font-medium truncate max-w-[240px] block">
-                                          {member.membershipName}
-                                        </span>
-                                      </TooltipTrigger>
-                                      <TooltipContent className="max-w-xs">
-                                        <p>{member.membershipName}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
+                                    <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                                      {member.firstName?.[0]}{member.lastName?.[0]}
+                                    </div>
+                                    <span className="font-mono text-slate-700 text-xs font-medium truncate">{member.memberId}</span>
                                   </div>
                                 </TableCell>
                                 
-                                <TableCell className="px-6 py-6">
-                                  <div className="flex flex-col items-start gap-1">
-                                    <span className="text-slate-700 font-medium">
-                                      {new Date(member.endDate).toLocaleDateString()}
+                                <TableCell className="px-4 py-1 h-[35px]">
+                                  <div className="flex flex-col justify-center h-full">
+                                    <span className="font-semibold text-slate-900 text-xs truncate">
+                                      {member.firstName} {member.lastName}
                                     </span>
-                                    {isExpiringSoon && !isChurned && (
-                                      <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300 px-2 py-1">
-                                        {daysUntilExpiry}d left
+                                    <span className="text-slate-500 text-xs truncate">
+                                      {member.email}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                
+                                <TableCell className="px-4 py-1 h-[35px]">
+                                  <div className="flex items-center gap-1">
+                                    {getMembershipIcon(member.membershipName)}
+                                    <span className="text-xs text-slate-700 font-medium truncate">
+                                      {member.membershipName?.replace(/\b\w/g, l => l.toUpperCase())}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                
+                                <TableCell className="px-4 py-1 h-[35px]">
+                                  {getStatusBadge(member.status)}
+                                </TableCell>
+                                
+                                <TableCell className="px-4 py-1 h-[35px]">
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3 text-slate-400" />
+                                    <div className="flex flex-col">
+                                      <span className="text-xs text-slate-700 font-medium">
+                                        {formatDate(member.endDate)}
+                                      </span>
+                                      {(isExpiringSoon || isExpired) && (
+                                        <div className="w-full h-1 bg-slate-200 rounded-full mt-0.5">
+                                          <div 
+                                            className={`h-full rounded-full ${
+                                              isExpired ? 'bg-red-500' : isExpiringSoon ? 'bg-orange-500' : 'bg-green-500'
+                                            }`}
+                                            style={{ width: `${Math.max(0, Math.min(100, (30 - Math.abs(daysUntilExpiry)) / 30 * 100))}%` }}
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                
+                                <TableCell className="px-4 py-1 h-[35px]">
+                                  <div className="flex items-center gap-1">
+                                    <MapPin className="h-3 w-3 text-slate-400" />
+                                    <span className="text-xs text-slate-700 font-medium truncate">{member.location}</span>
+                                  </div>
+                                </TableCell>
+                                
+                                <TableCell className="px-4 py-1 h-[35px] max-w-[120px]">
+                                  {member.comments ? (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <div className="flex items-center gap-1 cursor-pointer">
+                                            <MessageSquare className="h-3 w-3 text-blue-500" />
+                                            <span className="text-xs text-slate-600 truncate">
+                                              {member.comments.replace(/<[^>]*>/g, '').slice(0, 20)}...
+                                            </span>
+                                          </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-sm">
+                                          <div className="text-sm">{member.comments}</div>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ) : (
+                                    <span className="text-xs text-slate-400">-</span>
+                                  )}
+                                </TableCell>
+                                
+                                <TableCell className="px-4 py-1 h-[35px] max-w-[120px]">
+                                  {member.notes ? (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <div className="flex items-center gap-1 cursor-pointer">
+                                            <FileText className="h-3 w-3 text-green-500" />
+                                            <span className="text-xs text-slate-600 truncate">
+                                              {member.notes.replace(/<[^>]*>/g, '').slice(0, 20)}...
+                                            </span>
+                                          </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-sm">
+                                          <div className="text-sm">{member.notes}</div>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ) : (
+                                    <span className="text-xs text-slate-400">-</span>
+                                  )}
+                                </TableCell>
+                                
+                                <TableCell className="px-4 py-1 h-[35px]">
+                                  <div className="flex flex-wrap gap-1">
+                                    {member.tags?.slice(0, 2).map((tag, index) => (
+                                      <Badge key={index} variant="secondary" className="text-xs px-1 py-0 bg-slate-100 text-slate-700 h-4">
+                                        {tag}
+                                      </Badge>
+                                    ))}
+                                    {member.aiTags?.slice(0, 1).map((tag, index) => (
+                                      <Badge key={index} variant="outline" className="text-xs px-1 py-0 bg-purple-50 text-purple-700 border-purple-200 h-4">
+                                        🤖
+                                      </Badge>
+                                    ))}
+                                    {member.aiSentiment && member.aiSentiment !== 'neutral' && (
+                                      <Badge className={`text-xs px-1 py-0 h-4 ${getSentimentColorClasses(member.aiSentiment)}`}>
+                                        {getSentimentEmoji(member.aiSentiment)}
                                       </Badge>
                                     )}
-                                    {isChurned && (
-                                      <Badge variant="destructive" className="text-xs px-2 py-1">
-                                        Churned
+                                    {member.aiChurnRisk && member.aiChurnRisk !== 'medium' && (
+                                      <Badge className={`text-xs px-1 py-0 h-4 ${getChurnRiskColorClasses(member.aiChurnRisk)}`}>
+                                        {getChurnRiskEmoji(member.aiChurnRisk)}
                                       </Badge>
                                     )}
                                   </div>
                                 </TableCell>
                                 
-                                <TableCell className="px-6 py-6">
-                                  <div className="flex items-center gap-2">
-                                    <MapPin className="h-4 w-4 text-slate-500" />
-                                    <span className="text-slate-700 font-medium">{member.location}</span>
-                                  </div>
-                                </TableCell>
-                                
-                                <TableCell className="px-6 py-6 text-center">
-                                  <Badge 
-                                    variant={member.status === 'Active' ? "default" : member.status === 'Frozen' ? "secondary" : "destructive"}
-                                    className={`font-bold px-4 py-2 ${
-                                      member.status === 'Active' 
-                                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200' 
-                                        : member.status === 'Frozen'
-                                        ? 'bg-blue-100 text-blue-800 border-blue-300'
-                                        : 'bg-red-100 text-red-800 border-red-300'
-                                    }`}
-                                  >
-                                    {member.status}
-                                  </Badge>
-                                </TableCell>
-                                
-                                <TableCell className="px-6 py-6">
-                                  <span className="text-slate-700 font-medium">
-                                    {member.currentUsage || '-'}
-                                  </span>
-                                </TableCell>
-                                
-                                <TableCell className="px-6 py-6">
-                                  <div className="flex flex-col gap-2">
-                                    {member.tags && member.tags.length > 0 && (
-                                      <div className="flex flex-wrap gap-1">
-                                        {member.tags.slice(0, 2).map((tag, index) => (
-                                          <Badge 
-                                            key={index} 
-                                            variant="outline" 
-                                            className="text-xs bg-blue-50 text-blue-700 border-blue-200 px-2 py-1"
-                                          >
-                                            {tag}
-                                          </Badge>
-                                        ))}
-                                        {member.tags.length > 2 && (
-                                          <Badge variant="outline" className="text-xs bg-slate-50 text-slate-600 border-slate-200 px-2 py-1">
-                                            +{member.tags.length - 2}
-                                          </Badge>
-                                        )}
-                                      </div>
+                                <TableCell className="px-4 py-1 h-[35px]">
+                                  <div className="flex items-center gap-1">
+                                    {onEditMember && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onEditMember(member);
+                                        }}
+                                        className="h-6 w-6 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                      >
+                                        <Edit className="h-3 w-3" />
+                                      </Button>
                                     )}
-                                    {(member.comments || member.notes) && (
-                                      <div className="text-xs text-slate-600 truncate max-w-[120px]">
-                                        {member.comments || member.notes}
-                                      </div>
-                                    )}
-                                    {!member.tags?.length && !member.comments && !member.notes && (
-                                      <span className="text-xs text-slate-400 italic">No annotations</span>
-                                    )}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRowClick(member);
+                                      }}
+                                      className="h-6 w-6 p-0 hover:bg-slate-100 hover:text-slate-600"
+                                    >
+                                      <Eye className="h-3 w-3" />
+                                    </Button>
                                   </div>
                                 </TableCell>
                               </TableRow>

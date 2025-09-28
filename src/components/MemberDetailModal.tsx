@@ -77,6 +77,45 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
 
+  // Helper functions for AI analysis styling
+  const getSentimentBadgeClass = (sentiment: string): string => {
+    const colorMap: Record<string, string> = {
+      'positive': 'bg-green-100 text-green-700 border-green-200',
+      'neutral': 'bg-gray-100 text-gray-700 border-gray-200',
+      'negative': 'bg-red-100 text-red-700 border-red-200',
+      'mixed': 'bg-yellow-100 text-yellow-700 border-yellow-200'
+    };
+    return colorMap[sentiment] || 'bg-gray-100 text-gray-700 border-gray-200';
+  };
+
+  const getSentimentEmoji = (sentiment: string): string => {
+    const emojiMap: Record<string, string> = {
+      'positive': '😊',
+      'neutral': '😐',
+      'negative': '😞',
+      'mixed': '🤔'
+    };
+    return emojiMap[sentiment] || '😐';
+  };
+
+  const getChurnRiskBadgeClass = (churnRisk: string): string => {
+    const colorMap: Record<string, string> = {
+      'low': 'bg-green-100 text-green-700 border-green-200',
+      'medium': 'bg-orange-100 text-orange-700 border-orange-200',
+      'high': 'bg-red-100 text-red-700 border-red-200'
+    };
+    return colorMap[churnRisk] || 'bg-gray-100 text-gray-700 border-gray-200';
+  };
+
+  const getChurnRiskEmoji = (churnRisk: string): string => {
+    const emojiMap: Record<string, string> = {
+      'low': '🟢',
+      'medium': '🟡',
+      'high': '🔴'
+    };
+    return emojiMap[churnRisk] || '⚪';
+  };
+
   // Parse comments function
   const parseComments = (commentsString: string): Comment[] => {
     if (!commentsString) return [];
@@ -708,14 +747,45 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                   <div className="mt-8">
                     <Card className="shadow-lg border-2">
                       <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100">
-                        <CardTitle className="flex items-center gap-3">
-                          <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg">
-                            <Brain className="h-5 w-5" />
+                        <CardTitle className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg">
+                              <Brain className="h-5 w-5" />
+                            </div>
+                            AI Analysis Results
+                            <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                              {member.aiConfidence}% confidence
+                            </Badge>
                           </div>
-                          AI Analysis Results
-                          <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                            {member.aiConfidence}% confidence
-                          </Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                await googleSheetsService.clearAITags(member.memberId);
+                                // Clear AI data locally
+                                const updatedMember = {
+                                  ...member,
+                                  aiTags: [],
+                                  aiConfidence: undefined,
+                                  aiReasoning: undefined,
+                                  aiSentiment: undefined,
+                                  aiChurnRisk: undefined,
+                                  aiAnalysisDate: undefined
+                                };
+                                onSave(member.memberId, member.comments || '', member.notes || '', member.tags || []);
+                                toast.success('AI tags cleared successfully');
+                                onClose();
+                              } catch (error) {
+                                console.error('Error clearing AI tags:', error);
+                                toast.error('Failed to clear AI tags');
+                              }
+                            }}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Clear AI Tags
+                          </Button>
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="p-6 space-y-4">
@@ -729,6 +799,31 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                             ))}
                           </div>
                         </div>
+                        
+                        {/* Sentiment and Churn Risk */}
+                        <div className="grid grid-cols-2 gap-4">
+                          {member.aiSentiment && (
+                            <div>
+                              <Label className="text-sm font-semibold text-slate-600">Sentiment Analysis:</Label>
+                              <div className="mt-2">
+                                <Badge className={getSentimentBadgeClass(member.aiSentiment)}>
+                                  {getSentimentEmoji(member.aiSentiment)} {member.aiSentiment}
+                                </Badge>
+                              </div>
+                            </div>
+                          )}
+                          {member.aiChurnRisk && (
+                            <div>
+                              <Label className="text-sm font-semibold text-slate-600">Churn Risk Level:</Label>
+                              <div className="mt-2">
+                                <Badge className={getChurnRiskBadgeClass(member.aiChurnRisk)}>
+                                  {getChurnRiskEmoji(member.aiChurnRisk)} {member.aiChurnRisk} risk
+                                </Badge>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
                         {member.aiReasoning && (
                           <div>
                             <Label className="text-sm font-semibold text-slate-600">AI Reasoning:</Label>
