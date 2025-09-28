@@ -54,6 +54,37 @@ const DashboardContent = () => {
 
   useEffect(() => {
     if (membershipData) {
+      console.log('🔍 [DEBUG] Raw membership data received:', {
+        totalRecords: membershipData.length,
+        firstFewRecords: membershipData.slice(0, 3).map((m: any) => ({
+          memberId: m.memberId,
+          firstName: m.firstName,
+          lastName: m.lastName,
+          membershipName: m.membershipName,
+          location: m.location,
+          email: m.email
+        }))
+      });
+      
+      // Check for corrupted records
+      const corruptedRecords = (membershipData as MembershipData[]).filter((m: MembershipData) => 
+        !m.membershipName || m.membershipName.trim() === '' || 
+        !m.location || m.location.trim() === ''
+      );
+      
+      if (corruptedRecords.length > 0) {
+        console.warn('⚠️ [DEBUG] Found corrupted records:', {
+          count: corruptedRecords.length,
+          records: corruptedRecords.map(m => ({
+            memberId: m.memberId,
+            name: `${m.firstName} ${m.lastName}`,
+            membershipName: m.membershipName || '[EMPTY]',
+            location: m.location || '[EMPTY]',
+            email: m.email
+          }))
+        });
+      }
+      
       setLocalMembershipData(membershipData as MembershipData[]);
     }
   }, [membershipData]);
@@ -78,6 +109,13 @@ const DashboardContent = () => {
   }
 
     const handleAnnotationUpdate = (memberId: string, comments: string, notes: string, tags: string[]) => {
+    console.log('📝 [DEBUG] Starting annotation update:', {
+      memberId,
+      comments: comments.substring(0, 50) + (comments.length > 50 ? '...' : ''),
+      notes: notes.substring(0, 50) + (notes.length > 50 ? '...' : ''),
+      tags
+    });
+    
     // Update local data immediately
     setLocalMembershipData(prevData => 
       prevData.map(member => 
@@ -90,6 +128,22 @@ const DashboardContent = () => {
     // Save ONLY annotations to the Member_Annotations sheet
     const member = localMembershipData.find(member => member.memberId === memberId);
     if (member) {
+      console.log('👤 [DEBUG] Found member for annotation update:', {
+        memberId: member.memberId,
+        name: `${member.firstName} ${member.lastName}`,
+        membershipName: member.membershipName || '[EMPTY]',
+        location: member.location || '[EMPTY]',
+        email: member.email,
+        uniqueId: member.uniqueId
+      });
+      
+      console.log('💾 [DEBUG] Calling saveAnnotation with:', {
+        memberId: member.memberId,
+        email: member.email,
+        uniqueId: member.uniqueId,
+        soldBy: member.soldBy || '[EMPTY]'
+      });
+      
       googleSheetsService.saveAnnotation(
         member.memberId,
         member.email,
@@ -117,12 +171,27 @@ const DashboardContent = () => {
   };
 
   const handleUpdateMember = (updatedMember: MembershipData) => {
+    console.log('🔄 [DEBUG] Starting member update:', {
+      memberId: updatedMember.memberId,
+      name: `${updatedMember.firstName} ${updatedMember.lastName}`,
+      membershipName: updatedMember.membershipName || '[EMPTY]',
+      location: updatedMember.location || '[EMPTY]',
+      email: updatedMember.email
+    });
+    
     // Update local data immediately
     setLocalMembershipData(prev =>
       prev.map(member =>
         member.memberId === updatedMember.memberId ? updatedMember : member
       )
     );
+    
+    console.log('💾 [DEBUG] Calling updateSingleMember with:', {
+      memberId: updatedMember.memberId,
+      membershipName: updatedMember.membershipName,
+      location: updatedMember.location,
+      hasAllRequiredFields: !!(updatedMember.membershipName && updatedMember.location)
+    });
     
     // Save to Google Sheets to ensure persistence
     googleSheetsService.updateSingleMember(updatedMember)

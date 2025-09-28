@@ -270,16 +270,31 @@ class GoogleSheetsService {
 
   async getMembershipData() {
     try {
+      console.log('🔄 [DEBUG] Starting getMembershipData...');
       const [rawData, annotationsData] = await Promise.all([
         this.fetchSheetData(),
         this.fetchAnnotations()
       ]);
       
-      if (rawData.length === 0) return [];
+      if (rawData.length === 0) {
+        console.log('⚠️ [DEBUG] No raw data found');
+        return [];
+      }
 
       // Skip header row and transform data
       const [headers, ...rows] = rawData;
       const [annotationHeaders, ...annotationRows] = annotationsData;
+      
+      console.log('📊 [DEBUG] Data loaded:', {
+        totalRows: rows.length,
+        annotationRows: annotationRows.length,
+        sampleRow: rows[0] ? {
+          memberId: rows[0][1],
+          name: `${rows[0][2]} ${rows[0][3]}`,
+          membershipName: rows[0][5] || '[EMPTY]',
+          location: rows[0][7] || '[EMPTY]'
+        } : 'No data'
+      });
       
       // Create a map of annotations by both member ID and unique ID for better matching
       const annotationsMap = new Map();
