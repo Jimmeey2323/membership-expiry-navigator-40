@@ -163,176 +163,230 @@ const DashboardContent = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6 space-y-6">
-      {/* Global Filter Panel - Now at the top */}
-      <GlobalFilterPanel data={localMembershipData} />
-
-      {/* Dashboard Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">Membership Dashboard</h1>
-          <p className="text-slate-600 mt-1">Monitor and manage your membership data with advanced analytics</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/50 to-purple-50/30 p-6 space-y-6 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-indigo-100/20 to-transparent animate-pulse"></div>
+      <div className="absolute top-10 right-10 w-72 h-72 bg-gradient-to-br from-purple-200/30 to-indigo-200/30 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute bottom-10 left-10 w-96 h-96 bg-gradient-to-tr from-indigo-200/20 to-purple-200/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+      
+      <div className="relative z-10">
+        {/* Global Filter Panel - Enhanced */}
+        <div className="mb-6">
+          <GlobalFilterPanel data={localMembershipData} />
         </div>
-        <div className="flex items-center gap-3">
-          <Button 
-            onClick={() => refetch()}
-            disabled={isLoading}
-            variant="outline"
-            className="backdrop-blur-sm bg-white/70 border-white/30 hover:bg-white/90"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+
+        {/* Ultra-Modern Dashboard Header */}
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/10 via-purple-900/10 to-indigo-900/10 rounded-2xl blur-xl opacity-50 animate-pulse"></div>
+          <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl blur-md opacity-30 animate-pulse"></div>
+                <div className="relative p-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl shadow-xl">
+                  <Activity className="h-7 w-7" />
+                </div>
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-900 bg-clip-text text-transparent tracking-tight">
+                  Membership Dashboard
+                </h1>
+                <p className="text-slate-600 font-medium mt-1">Advanced analytics & member management system</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button 
+                onClick={() => refetch()}
+                disabled={isLoading}
+                variant="outline"
+                className="backdrop-blur-sm bg-white/90 border-indigo-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all duration-300 shadow-lg"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh Data
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Quick Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-blue-700">Total Members</CardTitle>
-              <Users className="h-5 w-5 text-blue-600" />
+        {/* Ultra-Modern Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="relative overflow-hidden backdrop-blur-xl bg-white/90 border-white/20 shadow-2xl group hover:shadow-3xl transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <CardHeader className="pb-3 relative">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold text-slate-700">Total Members</CardTitle>
+                <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg shadow-lg">
+                  <Users className="h-5 w-5 text-white" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="text-3xl font-bold text-slate-900 mb-2">{totalMembers.toLocaleString()}</div>
+              <div className="flex items-center">
+                <TrendingUp className="h-4 w-4 text-emerald-600 mr-1" />
+                <span className="text-sm font-medium text-emerald-600">+12% from last month</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="relative overflow-hidden backdrop-blur-xl bg-white/90 border-white/20 shadow-2xl group hover:shadow-3xl transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <CardHeader className="pb-3 relative">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold text-slate-700">Active Members</CardTitle>
+                <div className="p-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-lg shadow-lg">
+                  <UserCheck className="h-5 w-5 text-white" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="text-3xl font-bold text-slate-900 mb-2">{activeMembers.length.toLocaleString()}</div>
+              <div className="flex items-center">
+                <TrendingUp className="h-4 w-4 text-emerald-600 mr-1" />
+                <span className="text-sm font-medium text-emerald-600">+5% from last month</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="relative overflow-hidden backdrop-blur-xl bg-white/90 border-white/20 shadow-2xl group hover:shadow-3xl transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <CardHeader className="pb-3 relative">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold text-slate-700">Expiring Soon</CardTitle>
+                <div className="p-2 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg shadow-lg">
+                  <AlertTriangle className="h-5 w-5 text-white" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="text-3xl font-bold text-slate-900 mb-2">{expiringMembers.length.toLocaleString()}</div>
+              <div className="flex items-center">
+                <Calendar className="h-4 w-4 text-orange-600 mr-1" />
+                <span className="text-sm font-medium text-orange-600">Next 30 days</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="relative overflow-hidden backdrop-blur-xl bg-white/90 border-white/20 shadow-2xl group hover:shadow-3xl transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-rose-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <CardHeader className="pb-3 relative">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold text-slate-700">Churned</CardTitle>
+                <div className="p-2 bg-gradient-to-r from-red-500 to-rose-500 rounded-lg shadow-lg">
+                  <UserX className="h-5 w-5 text-white" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="text-3xl font-bold text-slate-900 mb-2">{churnedMembers.length.toLocaleString()}</div>
+              <div className="flex items-center">
+                <TrendingDown className="h-4 w-4 text-red-600 mr-1" />
+                <span className="text-sm font-medium text-red-600">-3% from last month</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Ultra-Modern Quick Actions */}
+        <Card className="relative overflow-hidden backdrop-blur-xl bg-white/90 border-white/20 shadow-2xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-indigo-500/5"></div>
+          <CardHeader className="relative">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-lg">
+                <Activity className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-bold text-slate-900">Quick Actions</CardTitle>
+                <CardDescription className="text-slate-600 font-medium">
+                  Streamlined tools for efficient member management
+                </CardDescription>
+              </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-900">{totalMembers.toLocaleString()}</div>
-            <div className="flex items-center mt-2">
-              <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
-              <span className="text-sm text-green-600">+12% from last month</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-green-700">Active Members</CardTitle>
-              <UserCheck className="h-5 w-5 text-green-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-900">{activeMembers.length.toLocaleString()}</div>
-            <div className="flex items-center mt-2">
-              <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
-              <span className="text-sm text-green-600">+5% from last month</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-orange-700">Expiring Soon</CardTitle>
-              <AlertTriangle className="h-5 w-5 text-orange-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-900">{expiringMembers.length.toLocaleString()}</div>
-            <div className="flex items-center mt-2">
-              <Calendar className="h-4 w-4 text-orange-600 mr-1" />
-              <span className="text-sm text-orange-600">Next 30 days</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-red-700">Churned</CardTitle>
-              <UserX className="h-5 w-5 text-red-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-900">{churnedMembers.length.toLocaleString()}</div>
-            <div className="flex items-center mt-2">
-              <TrendingDown className="h-4 w-4 text-red-600 mr-1" />
-              <span className="text-sm text-red-600">-3% from last month</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions */}
-      <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Quick Actions
-          </CardTitle>
-          <CardDescription>
-            Frequently used actions for member management
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {quickActions.map((action) => {
-              const Icon = action.icon;
-              
-              // Special handling for Add Member button
-              if (action.name === 'Add Member') {
+          <CardContent className="relative">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+                
+                // Special handling for Add Member button
+                if (action.name === 'Add Member') {
+                  return (
+                    <AddMemberModal
+                      key={action.name}
+                      onAddMember={handleAddMember}
+                      trigger={
+                        <Button
+                          variant="outline"
+                          className="h-24 flex flex-col items-center gap-3 hover:scale-105 transition-all duration-300 backdrop-blur-sm bg-white/80 border-indigo-200 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-600 hover:text-white hover:border-transparent hover:shadow-xl group"
+                        >
+                          <div className="p-2 bg-gradient-to-r from-indigo-100 to-purple-100 group-hover:from-white/20 group-hover:to-white/20 rounded-lg transition-all duration-300">
+                            <Icon className="h-5 w-5 text-indigo-600 group-hover:text-white transition-colors" />
+                          </div>
+                          <span className="text-sm font-semibold group-hover:text-white transition-colors">{action.name}</span>
+                        </Button>
+                      }
+                    />
+                  );
+                }
+                
                 return (
-                  <AddMemberModal
+                  <Button
                     key={action.name}
-                    onAddMember={handleAddMember}
-                    trigger={
-                      <Button
-                        variant="outline"
-                        className="h-20 flex flex-col items-center gap-2 hover:scale-105 transition-all duration-200 backdrop-blur-sm bg-white/60 border-white/40 hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-600 hover:text-white hover:border-transparent"
-                      >
-                        <Icon className="h-6 w-6" />
-                        <span className="text-sm font-medium">{action.name}</span>
-                      </Button>
-                    }
-                  />
+                    onClick={action.action}
+                    variant="outline"
+                    className="h-24 flex flex-col items-center gap-3 hover:scale-105 transition-all duration-300 backdrop-blur-sm bg-white/80 border-indigo-200 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-600 hover:text-white hover:border-transparent hover:shadow-xl group"
+                  >
+                    <div className="p-2 bg-gradient-to-r from-indigo-100 to-purple-100 group-hover:from-white/20 group-hover:to-white/20 rounded-lg transition-all duration-300">
+                      <Icon className="h-5 w-5 text-indigo-600 group-hover:text-white transition-colors" />
+                    </div>
+                    <span className="text-sm font-semibold group-hover:text-white transition-colors">{action.name}</span>
+                  </Button>
                 );
-              }
-              
-              return (
-                <Button
-                  key={action.name}
-                  onClick={action.action}
-                  variant="outline"
-                  className="h-20 flex flex-col items-center gap-2 hover:scale-105 transition-all duration-200 backdrop-blur-sm bg-white/60 border-white/40 hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-600 hover:text-white hover:border-transparent"
-                >
-                  <Icon className="h-6 w-6" />
-                  <span className="text-sm font-medium">{action.name}</span>
-                </Button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+              })}
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Main Content Tabs */}
-      <Tabs defaultValue="members" className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <TabsList className="grid w-full sm:w-auto grid-cols-3 backdrop-blur-xl bg-white/80 border-white/20">
-            <TabsTrigger value="members" className="flex items-center gap-2 data-[state=active]:bg-white/90">
-              <Users className="h-4 w-4" />
-              Members
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center gap-2 data-[state=active]:bg-white/90">
-              <BarChart3 className="h-4 w-4" />
-              Analytics
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center gap-2 data-[state=active]:bg-white/90">
-              <FileText className="h-4 w-4" />
-              Reports
-            </TabsTrigger>
-          </TabsList>
-          
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="flex items-center gap-1 backdrop-blur-sm bg-white/70">
-              <MessageSquare className="h-3 w-3" />
-              {withAnnotations.length} with notes
-            </Badge>
-            <Badge variant="outline" className="flex items-center gap-1 backdrop-blur-sm bg-white/70">
-              <AlertTriangle className="h-3 w-3" />
-              {churnedMembers.length} churned
-            </Badge>
+        {/* Ultra-Modern Content Tabs */}
+        <Tabs defaultValue="members" className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/10 to-purple-900/10 rounded-xl blur-lg opacity-50"></div>
+              <TabsList className="relative grid w-full sm:w-auto grid-cols-3 backdrop-blur-xl bg-white/90 border-white/20 shadow-lg">
+                <TabsTrigger 
+                  value="members" 
+                  className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-purple-600 data-[state=active]:text-white transition-all duration-300"
+                >
+                  <Users className="h-4 w-4" />
+                  Members
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="analytics" 
+                  className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-purple-600 data-[state=active]:text-white transition-all duration-300"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Analytics
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="reports" 
+                  className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-purple-600 data-[state=active]:text-white transition-all duration-300"
+                >
+                  <FileText className="h-4 w-4" />
+                  Reports
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <Badge variant="secondary" className="flex items-center gap-2 backdrop-blur-sm bg-white/80 border-indigo-200 text-indigo-700 shadow-lg">
+                <MessageSquare className="h-3 w-3" />
+                {withAnnotations.length} with notes
+              </Badge>
+              <Badge variant="outline" className="flex items-center gap-2 backdrop-blur-sm bg-white/80 border-orange-200 text-orange-700 shadow-lg">
+                <AlertTriangle className="h-3 w-3" />
+                {churnedMembers.length} churned
+              </Badge>
+            </div>
           </div>
-        </div>
 
         <TabsContent value="members" className="space-y-6">
           <EnhancedDataTable
@@ -354,23 +408,43 @@ const DashboardContent = () => {
           <PremiumCharts data={filteredData} />
         </TabsContent>
 
-        <TabsContent value="reports" className="space-y-6">
-          <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl">
-            <CardHeader>
-              <CardTitle>Reports & Insights</CardTitle>
-              <CardDescription>
-                Comprehensive reporting features coming soon!
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="h-96 flex items-center justify-center">
-              <div className="text-center">
-                <FileText className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-slate-600 mb-2">Advanced Reports</h3>
-                <p className="text-slate-500">Detailed member insights and analytics reports will be available here.</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+          <TabsContent value="reports" className="space-y-6">
+            <Card className="relative overflow-hidden backdrop-blur-xl bg-white/90 border-white/20 shadow-2xl">
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-500/5 via-transparent to-slate-500/5"></div>
+              <CardHeader className="relative">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-slate-600 to-slate-700 rounded-lg shadow-lg">
+                    <FileText className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-bold text-slate-900">Reports & Insights</CardTitle>
+                    <CardDescription className="text-slate-600 font-medium">
+                      Advanced reporting features coming soon!
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="relative h-96 flex items-center justify-center">
+                <div className="text-center space-y-4">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-slate-300/20 to-slate-400/20 rounded-full blur-2xl animate-pulse"></div>
+                    <FileText className="relative h-16 w-16 text-slate-400 mx-auto" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-bold text-slate-700">Advanced Reporting Suite</h3>
+                    <p className="text-slate-500 font-medium max-w-md mx-auto">
+                      Comprehensive analytics, detailed member insights, and customizable reports will be available here.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-2 mt-6">
+                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></div>
+                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse delay-100"></div>
+                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse delay-200"></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
       </Tabs>
 
       {/* Modals */}
@@ -393,6 +467,7 @@ const DashboardContent = () => {
           />
         </>
       )}
+      </div>
     </div>
   );
 };

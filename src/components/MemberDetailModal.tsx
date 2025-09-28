@@ -653,6 +653,51 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                     </Card>
                   </div>
                 )}
+
+                {/* Raw Data Section - Fallback if no parsed annotations */}
+                {(notes.length === 0 && comments.length === 0 && tags.length === 0) && 
+                 (member.notes || member.comments || (member.tags && member.tags.length > 0)) && (
+                  <div className="mt-8">
+                    <Card className="shadow-lg border-2">
+                      <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100">
+                        <CardTitle className="flex items-center gap-3">
+                          <div className="p-2 bg-gray-500 text-white rounded-lg">
+                            <FileText className="h-5 w-5" />
+                          </div>
+                          Raw Annotation Data
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-6 space-y-4">
+                        {member.notes && (
+                          <div>
+                            <Label className="text-sm font-semibold text-slate-600">Notes:</Label>
+                            <div className="p-3 bg-gray-50 rounded border mt-2">
+                              <pre className="text-sm whitespace-pre-wrap">{member.notes}</pre>
+                            </div>
+                          </div>
+                        )}
+                        {member.comments && (
+                          <div>
+                            <Label className="text-sm font-semibold text-slate-600">Comments:</Label>
+                            <div className="p-3 bg-gray-50 rounded border mt-2">
+                              <pre className="text-sm whitespace-pre-wrap">{member.comments}</pre>
+                            </div>
+                          </div>
+                        )}
+                        {member.tags && member.tags.length > 0 && (
+                          <div>
+                            <Label className="text-sm font-semibold text-slate-600">Tags:</Label>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {member.tags.map((tag, index) => (
+                                <Badge key={index} variant="outline">{tag}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="comments" className="space-y-6">
