@@ -126,8 +126,26 @@ export const MetricCard = ({
           </Card>
         </TooltipTrigger>
         {tooltip && (
-          <TooltipContent side="top" className="max-w-xs card-glass">
-            <p className="text-refined">{tooltip}</p>
+          <TooltipContent 
+            side="top" 
+            className="bg-slate-900 text-cyan-300 border border-cyan-500/30 shadow-lg shadow-cyan-500/20 max-w-xs p-3 rounded-lg"
+          >
+            <div className="space-y-2">
+              <h4 className="font-semibold text-cyan-200 text-sm">Detailed Analytics</h4>
+              <p className="text-cyan-300 text-sm leading-relaxed">{tooltip}</p>
+              {drillDownData.length > 0 && (
+                <div className="mt-3 pt-2 border-t border-cyan-500/20">
+                  <div className="grid grid-cols-1 gap-1">
+                    {drillDownData.slice(0, 3).map((item, index) => (
+                      <div key={index} className="flex justify-between items-center text-xs">
+                        <span className="text-cyan-400">{item.label}:</span>
+                        <span className="text-cyan-200 font-medium">{typeof item.value === 'number' ? item.value.toLocaleString() : item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </TooltipContent>
         )}
       </Tooltip>

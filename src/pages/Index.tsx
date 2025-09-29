@@ -49,9 +49,18 @@ const DashboardContent = () => {
 
   const { data: membershipData, refetch, isLoading, error } = useQuery({
     queryKey: ["membershipData"],
-    queryFn: () => googleSheetsService.getMembershipData(),
+    queryFn: async () => {
+      // Fetch fresh data and remap annotations
+      const data = await googleSheetsService.getMembershipData();
+      // Trigger annotation refresh in the background
+      setTimeout(() => {
+        googleSheetsService.fetchAnnotations().catch(console.error);
+      }, 100);
+      return data;
+    },
     refetchInterval: 30000,
     refetchOnWindowFocus: true,
+    staleTime: 0, // Always consider data stale to force fresh fetching
   });
 
   useEffect(() => {
