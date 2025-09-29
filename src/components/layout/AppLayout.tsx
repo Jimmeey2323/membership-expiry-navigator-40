@@ -91,8 +91,8 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
 
   return (
     <div className="flex h-screen bg-white flex-col">
-      {/* Modern Refined Header */}
-      <header className="bg-white/95 backdrop-blur-xl border-b border-white/30 shadow-lg z-50">
+      {/* Common Header */}
+      <header className="bg-gradient-to-r from-gray-800 to-gray-700 border-b border-gray-600 shadow-lg z-50">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center space-x-4">
             {/* Toggle Sidebar Button */}
@@ -100,7 +100,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
               variant="ghost"
               size="sm"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="hidden lg:flex text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              className="hidden lg:flex text-gray-200 hover:text-white hover:bg-gray-600"
             >
               <Menu className="h-5 w-5" />
             </Button>
@@ -110,31 +110,31 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
               variant="ghost"
               size="sm"
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              className="lg:hidden text-gray-200 hover:text-white hover:bg-gray-600"
             >
               <Menu className="h-5 w-5" />
             </Button>
             
             {/* Logo and Title */}
             <div className="flex items-center space-x-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl shadow-lg">
+              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-600 to-teal-600 rounded-xl shadow-lg">
                 <Building2 className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-900 bg-clip-text text-transparent">MembershipPro</h1>
-                <p className="text-sm text-slate-600 font-medium">Management System</p>
+                <h1 className="text-lg font-bold text-white">MembershipPro</h1>
+                <p className="text-sm text-gray-200">Management System</p>
               </div>
             </div>
             
             {/* Breadcrumbs */}
             <nav className="flex items-center space-x-2 ml-8">
-              <Link to="/" className="text-sm text-slate-600 hover:text-slate-900 font-medium transition-colors duration-200">
+              <Link to="/" className="text-sm text-gray-200 hover:text-white">
                 Dashboard
               </Link>
               {location.pathname !== '/' && (
                 <>
-                  <ChevronRight className="h-4 w-4 text-slate-400" />
-                  <span className="text-sm text-slate-900 font-semibold">
+                  <ChevronRight className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-white font-medium">
                     {location.pathname === '/churn-analytics' ? 'Analytics' : 'Current Page'}
                   </span>
                 </>
@@ -144,32 +144,32 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
 
           {/* Header actions */}
           <div className="flex items-center space-x-3">
-            {/* Enhanced Search */}
+            {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search members..."
-                className="pl-10 pr-4 py-2 border border-white/50 rounded-lg bg-white/95 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all duration-200 backdrop-blur-sm shadow-sm"
+                className="pl-10 pr-4 py-2 border border-gray-500 rounded-lg bg-gray-600 text-white placeholder-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-gray-500"
               />
             </div>
 
             {/* Notifications */}
-            <Button variant="ghost" size="sm" className="relative text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors duration-200">
+            <Button variant="ghost" size="sm" className="relative text-gray-200 hover:text-white hover:bg-gray-600">
               <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full flex items-center justify-center shadow-sm">
+              <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full flex items-center justify-center">
                 <span className="text-xs text-white font-bold">3</span>
               </span>
             </Button>
 
             {/* User menu */}
-            <div className="flex items-center space-x-3 pl-3 border-l border-slate-200">
-              <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center shadow-sm">
+            <div className="flex items-center space-x-3 pl-3 border-l border-gray-500">
+              <div className="w-8 h-8 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center">
                 <Sparkles className="h-4 w-4 text-white" />
               </div>
               <div className="text-sm">
-                <p className="font-semibold text-slate-900">Admin User</p>
-                <p className="text-slate-600">admin@company.com</p>
+                <p className="font-medium text-white">Admin User</p>
+                <p className="text-gray-300">admin@company.com</p>
               </div>
             </div>
           </div>

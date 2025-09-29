@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,15 +68,6 @@ export const EditMemberModal = ({
   const setOpen = isControlled ? controlledOnOpenChange || (() => {}) : setInternalOpen;
 
   const membershipTypes = [
-    // Actual membership types from your Google Sheets
-    'Studio Annual Unlimited',
-    'Studio 1 Month Unlimited',
-    'Studio 6 Month Unlimited',
-    'Studio 3 Month Unlimited',
-    'Studio 4 Class Package',
-    'Studio 8 Class Package',
-    'Studio 12 Class Package',
-    // Generic types
     'Premium Monthly',
     'Premium Annual',
     'Basic Monthly',
@@ -89,11 +80,6 @@ export const EditMemberModal = ({
   ];
 
   const locations = [
-    // Actual locations from your Google Sheets
-    'Kwality House, Kemps Corner',
-    'Supreme HQ, Bandra',
-    'Kenkere House',
-    // Generic locations
     'Downtown',
     'Westside',
     'Eastside',
@@ -108,95 +94,23 @@ export const EditMemberModal = ({
   // Initialize form data when member changes
   useEffect(() => {
     if (member) {
-      console.log('🔍 [DEBUG] EditMemberModal - Member data received:', {
-        memberId: member.memberId,
-        name: `${member.firstName} ${member.lastName}`,
-        membershipName: member.membershipName,
-        location: member.location,
-        email: member.email
+      setFormData({
+        firstName: member.firstName || '',
+        lastName: member.lastName || '',
+        email: member.email || '',
+        location: member.location || '',
+        membershipName: member.membershipName || '',
+        startDate: member.orderDate ? parseISO(member.orderDate) : new Date(),
+        endDate: member.endDate ? parseISO(member.endDate) : new Date(),
+        sessionsLeft: member.sessionsLeft?.toString() || '',
+        paid: member.paid || '',
+        status: member.status || 'Active',
+        comments: member.comments || '',
+        notes: member.notes || '',
+        tags: member.tags || [],
+        soldBy: member.soldBy || '',
+        frozen: member.frozen || 'No'
       });
-      
-      try {
-        // Safe date parsing with multiple fallbacks
-        const parseDate = (dateStr: string | undefined) => {
-          if (!dateStr || dateStr === '') return new Date();
-          
-          // Clean the date string and try different formats
-          const cleanDateStr = dateStr.trim();
-          
-          // Handle various date formats
-          const formats = [
-            cleanDateStr,
-            cleanDateStr.replace(',', ''), // Remove comma if present
-            cleanDateStr.split(',')[0], // Take only date part before comma
-            cleanDateStr + 'T00:00:00Z',
-            cleanDateStr + 'T00:00:00',
-            cleanDateStr.split(' ')[0], // Take only date part before space
-          ];
-          
-          for (const format of formats) {
-            try {
-              // Try parseISO first
-              let parsed = parseISO(format);
-              if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 1900) {
-                return parsed;
-              }
-              
-              // Try Date constructor
-              parsed = new Date(format);
-              if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 1900) {
-                return parsed;
-              }
-            } catch (e) {
-              // Continue to next format
-            }
-          }
-          
-          // Fallback to current date
-          console.warn('Could not parse date:', dateStr, 'using current date');
-          return new Date();
-        };
-
-        const formDataToSet = {
-          firstName: member.firstName || '',
-          lastName: member.lastName || '',
-          email: member.email || '',
-          location: member.location || '',
-          membershipName: member.membershipName || '',
-          startDate: parseDate(member.orderDate),
-          endDate: parseDate(member.endDate),
-          sessionsLeft: member.sessionsLeft?.toString() || '',
-          paid: member.paid || '',
-          status: member.status || 'Active',
-          comments: member.comments || '',
-          notes: member.notes || '',
-          tags: Array.isArray(member.tags) ? member.tags : [],
-          soldBy: member.soldBy || '',
-          frozen: member.frozen || 'No'
-        };
-        
-        setFormData(formDataToSet);
-      } catch (error) {
-        console.error('Error initializing form data:', error, member);
-        // Set safe defaults
-        setFormData({
-          firstName: '',
-          lastName: '',
-          email: '',
-          location: '',
-          membershipName: '',
-          startDate: new Date(),
-          endDate: new Date(),
-          sessionsLeft: '',
-          paid: '',
-          status: 'Active',
-          comments: '',
-          notes: '',
-          tags: [],
-          soldBy: '',
-          frozen: 'No'
-        });
-      }
     }
   }, [member]);
 
@@ -218,46 +132,35 @@ export const EditMemberModal = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    try {
-      // Validation
-      if (!formData.firstName || !formData.lastName || !formData.email) {
-        toast.error('Please fill in all required fields (First Name, Last Name, Email)');
-        return;
-      }
-
-      const updatedMember: MembershipData = {
-        ...member,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        location: formData.location,
-        membershipName: formData.membershipName,
-        orderDate: format(formData.startDate, 'yyyy-MM-dd'),
-        endDate: format(formData.endDate, 'yyyy-MM-dd'),
-        sessionsLeft: formData.sessionsLeft ? parseInt(formData.sessionsLeft) : member.sessionsLeft,
-        paid: formData.paid,
-        status: formData.status as any,
-        comments: formData.comments,
-        notes: formData.notes,
-        tags: formData.tags,
-        soldBy: formData.soldBy,
-        frozen: formData.status === 'Frozen' ? 'Yes' : 'No'
-      };
-
-      onUpdateMember(updatedMember);
-      toast.success('Member updated successfully!');
-      setOpen(false);
-    } catch (error) {
-      console.error('Error updating member:', error);
-      toast.error('Failed to update member. Please try again.');
+    // Validation
+    if (!formData.firstName || !formData.lastName || !formData.email) {
+      toast.error('Please fill in all required fields (First Name, Last Name, Email)');
+      return;
     }
-  };
 
-  // Don't render if no member data
-  if (!member) {
-    console.warn('EditMemberModal: No member data provided');
-    return null;
-  }
+    const updatedMember: MembershipData = {
+      ...member,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      location: formData.location,
+      membershipName: formData.membershipName,
+      orderDate: format(formData.startDate, 'yyyy-MM-dd'),
+      endDate: format(formData.endDate, 'yyyy-MM-dd'),
+      sessionsLeft: formData.sessionsLeft ? parseInt(formData.sessionsLeft) : member.sessionsLeft,
+      paid: formData.paid,
+      status: formData.status as any,
+      comments: formData.comments,
+      notes: formData.notes,
+      tags: formData.tags,
+      soldBy: formData.soldBy,
+      frozen: formData.status === 'Frozen' ? 'Yes' : 'No'
+    };
+
+    onUpdateMember(updatedMember);
+    toast.success('Member updated successfully!');
+    setOpen(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -270,11 +173,8 @@ export const EditMemberModal = ({
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
             <Edit className="h-5 w-5" />
-            Edit Member: {member?.firstName || 'Unknown'} {member?.lastName || 'Member'}
+            Edit Member: {member.firstName} {member.lastName}
           </DialogTitle>
-          <DialogDescription className="text-slate-600">
-            Update member information, membership details, and personal notes.
-          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -325,7 +225,7 @@ export const EditMemberModal = ({
                 <Label htmlFor="memberId">Member ID</Label>
                 <Input
                   id="memberId"
-                  value={member?.memberId || 'N/A'}
+                  value={member.memberId}
                   className="backdrop-blur-sm bg-gray-100"
                   disabled
                 />

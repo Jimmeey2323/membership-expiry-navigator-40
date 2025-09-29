@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,7 +62,12 @@ export const GroupableDataTable = ({
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [groupBy, setGroupBy] = useState<GroupByField>('none');
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  const itemsPerPage = 25;
+  const [itemsPerPage, setItemsPerPage] = useState(25);
+
+  // Reset to first page when search term or groupBy changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, groupBy]);
 
   // Helper functions for AI analysis styling
   const getSentimentColorClasses = (sentiment: string): string => {
@@ -173,7 +178,11 @@ export const GroupableDataTable = ({
 
   const groupedData = useMemo(() => {
     if (groupBy === 'none') {
-      return { 'All Members': filteredAndSortedData };
+      // Apply pagination to ungrouped data
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const paginatedData = filteredAndSortedData.slice(startIndex, endIndex);
+      return { 'All Members': paginatedData };
     }
 
     const groups: Record<string, MembershipData[]> = {};
@@ -204,8 +213,27 @@ export const GroupableDataTable = ({
       groups[groupKey].push(member);
     });
 
+    // Apply pagination to grouped data
+    if (groupBy !== 'none') {
+      const groupEntries = Object.entries(groups);
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      
+      // For groups, we paginate the groups themselves, not individual members
+      const paginatedGroups = groupEntries.slice(startIndex, endIndex);
+      return Object.fromEntries(paginatedGroups);
+    }
+
     return groups;
-  }, [filteredAndSortedData, groupBy]);
+  }, [filteredAndSortedData, groupBy, currentPage, itemsPerPage]);
+
+  // Pagination calculations
+  const totalEntries = groupBy === 'none' 
+    ? filteredAndSortedData.length 
+    : Object.keys(groupedData).length;
+  const totalPages = Math.ceil(totalEntries / itemsPerPage);
+  const startEntry = (currentPage - 1) * itemsPerPage + 1;
+  const endEntry = Math.min(currentPage * itemsPerPage, totalEntries);
 
   const getGroupTotal = (members: MembershipData[]) => {
     return {
@@ -420,60 +448,57 @@ export const GroupableDataTable = ({
                     {!isGroupCollapsed(groupName) && (
                     <div className="relative overflow-hidden rounded-2xl border-2 border-slate-200 bg-white shadow-xl animate-in slide-in-from-top-2 duration-300 border-l-4 border-r-4 border-l-black border-r-black">
                       <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 via-transparent to-purple-50/30"></div>
-                      <Table className="relative z-10">
-                        <TableHeader className="group">
-                          <TableRow className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b-2 border-slate-600 h-14 hover:from-slate-800 hover:to-slate-800 transition-all duration-300 relative group">
-                            {/* Animated bottom border */}
-                            <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 opacity-0 group-hover:opacity-100 transition-all duration-500 animate-pulse"></div>
-                            <TableHead className="text-white font-bold text-sm px-4 whitespace-nowrap relative z-10">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b-4 border-blue-500 h-14 hover:from-slate-800 hover:to-slate-800 transition-all duration-300">
+                            <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap">
                               <Button 
                                 variant="ghost" 
-                                className="h-auto p-0 font-bold text-white hover:text-blue-200 text-sm transition-colors duration-300"
+                                className="h-auto p-0 font-bold text-white hover:text-blue-200 text-xs"
                                 onClick={() => handleSort('memberId')}
                               >
-                                <User className="h-4 w-4 mr-2" />
+                                <User className="h-3 w-3 mr-1" />
                                 ID {getSortIcon('memberId')}
                               </Button>
                             </TableHead>
-                            <TableHead className="text-white font-bold text-sm px-4 whitespace-nowrap min-w-[180px] relative z-10">
+                            <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap min-w-[180px]">
                               <Button 
                                 variant="ghost" 
-                                className="h-auto p-0 font-bold text-white hover:text-blue-200 text-sm transition-colors duration-300"
+                                className="h-auto p-0 font-bold text-white hover:text-blue-200 text-xs"
                                 onClick={() => handleSort('firstName')}
                               >
-                                <User className="h-4 w-4 mr-2" />
                                 Member {getSortIcon('firstName')}
                               </Button>
                             </TableHead>
-                            <TableHead className="text-white font-bold text-sm px-4 whitespace-nowrap min-w-[120px] relative z-10">
-                              <Crown className="h-4 w-4 mr-2 inline" />
+                            <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap min-w-[120px]">
+                              <Crown className="h-3 w-3 mr-1 inline" />
                               Membership
                             </TableHead>
-                            <TableHead className="text-white font-bold text-sm px-4 whitespace-nowrap min-w-[80px] relative z-10">
-                              <Zap className="h-4 w-4 mr-2 inline" />
+                            <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap min-w-[80px]">
+                              <Zap className="h-3 w-3 mr-1 inline" />
                               Status
                             </TableHead>
-                            <TableHead className="text-white font-bold text-sm px-4 whitespace-nowrap min-w-[100px] relative z-10">
-                              <Calendar className="h-4 w-4 mr-2 inline" />
+                            <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap min-w-[100px]">
+                              <Calendar className="h-3 w-3 mr-1 inline" />
                               End Date
                             </TableHead>
-                            <TableHead className="text-white font-bold text-sm px-4 whitespace-nowrap min-w-[100px] relative z-10">
-                              <MapPin className="h-4 w-4 mr-2 inline" />
+                            <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap min-w-[100px]">
+                              <MapPin className="h-3 w-3 mr-1 inline" />
                               Location
                             </TableHead>
-                            <TableHead className="text-white font-bold text-sm px-6 whitespace-nowrap min-w-[200px] max-w-[250px] relative z-10">
-                              <MessageSquare className="h-4 w-4 mr-2 inline" />
+                            <TableHead className="text-white font-bold text-xs px-6 whitespace-nowrap min-w-[200px] max-w-[250px]">
+                              <MessageSquare className="h-3 w-3 mr-1 inline" />
                               Comments
                             </TableHead>
-                            <TableHead className="text-white font-bold text-sm px-6 whitespace-nowrap min-w-[200px] max-w-[250px] relative z-10">
-                              <FileText className="h-4 w-4 mr-2 inline" />
+                            <TableHead className="text-white font-bold text-xs px-6 whitespace-nowrap min-w-[200px] max-w-[250px]">
+                              <FileText className="h-3 w-3 mr-1 inline" />
                               Notes
                             </TableHead>
-                            <TableHead className="text-white font-bold text-sm px-4 whitespace-nowrap min-w-[100px] relative z-10">
-                              <Tag className="h-4 w-4 mr-2 inline" />
+                            <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap min-w-[100px]">
+                              <Tag className="h-3 w-3 mr-1 inline" />
                               Tags
                             </TableHead>
-                            <TableHead className="text-white font-bold text-sm px-4 whitespace-nowrap w-16 relative z-10">
+                            <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap w-16">
                               Actions
                             </TableHead>
                           </TableRow>
@@ -514,7 +539,7 @@ export const GroupableDataTable = ({
                                 <TableCell className="px-4 py-1 h-[45px] max-h-[45px] overflow-hidden">
                                   <div className="flex items-center gap-1">
                                     {getMembershipIcon(member.membershipName)}
-                                    <span className="text-sm text-slate-700 font-medium truncate">
+                                    <span className="text-xs text-slate-700 font-medium truncate">
                                       {member.membershipName?.replace(/\b\w/g, l => l.toUpperCase())}
                                     </span>
                                   </div>
@@ -528,7 +553,7 @@ export const GroupableDataTable = ({
                                   <div className="flex items-center gap-1">
                                     <Calendar className="h-3 w-3 text-slate-400" />
                                     <div className="flex flex-col">
-                                      <span className="text-sm text-slate-700 font-medium">
+                                      <span className="text-xs text-slate-700 font-medium">
                                         {formatDate(member.endDate)}
                                       </span>
                                       {(isExpiringSoon || isExpired) && (
@@ -548,7 +573,7 @@ export const GroupableDataTable = ({
                                 <TableCell className="px-4 py-1 h-[45px] max-h-[45px] overflow-hidden">
                                   <div className="flex items-center gap-1">
                                     <MapPin className="h-3 w-3 text-slate-400" />
-                                    <span className="text-sm text-slate-700 font-medium truncate">{member.location}</span>
+                                    <span className="text-xs text-slate-700 font-medium truncate">{member.location}</span>
                                   </div>
                                 </TableCell>
                                 
@@ -594,7 +619,9 @@ export const GroupableDataTable = ({
                                   ) : (
                                     <span className="text-sm text-slate-400">-</span>
                                   )}
-                                </TableCell>                                <TableCell className="px-4 py-1 h-[45px] max-h-[45px] overflow-hidden">
+                                </TableCell>
+                                
+                                <TableCell className="px-4 py-1 h-[45px] max-h-[45px] overflow-hidden">
                                   <div className="flex flex-wrap gap-1">
                                     {member.tags?.slice(0, 2).map((tag, index) => (
                                       <Badge key={index} variant="secondary" className="text-xs px-1 py-0 bg-slate-100 text-slate-700 h-4">
@@ -664,12 +691,15 @@ export const GroupableDataTable = ({
               <div className="flex items-center justify-between border-t border-slate-200/60 pt-6">
                 <div className="flex items-center gap-4">
                   <span className="text-sm text-slate-600 font-medium">
-                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, Object.values(groupedData).reduce((total, group) => total + group.length, 0))} of {Object.values(groupedData).reduce((total, group) => total + group.length, 0)} entries
+                    Showing {startEntry} to {endEntry} of {totalEntries} {groupBy === 'none' ? 'entries' : 'groups'}
                   </span>
                   <select 
                     className="px-3 py-1 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     value={itemsPerPage}
-                    onChange={(e) => setCurrentPage(1)} // Reset to first page when changing items per page
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
                   >
                     <option value={10}>10 per page</option>
                     <option value={25}>25 per page</option>
@@ -692,7 +722,7 @@ export const GroupableDataTable = ({
                   
                   {/* Page Numbers */}
                   <div className="flex items-center gap-1">
-                    {[...Array(Math.ceil(Object.values(groupedData).reduce((total, group) => total + group.length, 0) / itemsPerPage))].slice(Math.max(0, currentPage - 3), currentPage + 2).map((_, index) => {
+                    {totalPages > 0 && [...Array(totalPages)].slice(Math.max(0, currentPage - 3), Math.min(totalPages, currentPage + 2)).map((_, index) => {
                       const pageNum = Math.max(0, currentPage - 3) + index + 1;
                       return (
                         <Button
@@ -716,8 +746,8 @@ export const GroupableDataTable = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setCurrentPage(prev => Math.min(Math.ceil(Object.values(groupedData).reduce((total, group) => total + group.length, 0) / itemsPerPage), prev + 1))}
-                    disabled={currentPage === Math.ceil(Object.values(groupedData).reduce((total, group) => total + group.length, 0) / itemsPerPage)}
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages || totalPages === 0}
                     className="h-10 px-4 bg-white hover:bg-blue-50 border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   >
                     Next

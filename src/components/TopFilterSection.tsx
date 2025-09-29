@@ -89,9 +89,9 @@ export const TopFilterSection = ({ filters, onFiltersChange, data }: TopFilterSe
   return (
     <div className="w-full">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <Card className="backdrop-blur-xl bg-white/95 border-white/30 shadow-lg">
+        <Card className="backdrop-blur-xl bg-white/70 border-white/20 shadow-lg">
           <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-white/50 transition-colors duration-200">
+            <CardHeader className="cursor-pointer hover:bg-white/30 transition-colors">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Filter className="h-5 w-5 text-slate-600" />
@@ -99,7 +99,7 @@ export const TopFilterSection = ({ filters, onFiltersChange, data }: TopFilterSe
                     Advanced Filters
                   </CardTitle>
                   {hasActiveFilters() && (
-                    <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200">
+                    <Badge className="bg-blue-100 text-blue-800 border-blue-200">
                       {activeFilterCount} active
                     </Badge>
                   )}
@@ -113,7 +113,7 @@ export const TopFilterSection = ({ filters, onFiltersChange, data }: TopFilterSe
                         e.stopPropagation();
                         clearAllFilters();
                       }}
-                      className="text-slate-600 hover:text-slate-800 hover:bg-slate-100"
+                      className="text-slate-600 hover:text-slate-800"
                     >
                       Clear all
                     </Button>
@@ -130,30 +130,17 @@ export const TopFilterSection = ({ filters, onFiltersChange, data }: TopFilterSe
 
           <CollapsibleContent>
             <CardContent className="pt-0 space-y-6">
-              {/* Enhanced Search Filter */}
+              {/* Search Filter */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                  <Search className="h-4 w-4" />
-                  Search
-                </label>
+                <label className="text-sm font-medium text-slate-700">Search</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <Input
                     placeholder="Search members, emails, IDs..."
                     value={filters.search}
                     onChange={(e) => updateFilter('search', e.target.value)}
-                    className="pl-10 h-10 backdrop-blur-sm bg-white/95 border-white/50 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200/50 transition-all duration-200 placeholder:text-slate-400"
+                    className="pl-10 backdrop-blur-sm bg-white/80 border-white/30"
                   />
-                  {filters.search && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => updateFilter('search', '')}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-slate-100"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  )}
                 </div>
               </div>
 
@@ -166,7 +153,7 @@ export const TopFilterSection = ({ filters, onFiltersChange, data }: TopFilterSe
                     Status
                   </label>
                   <Select onValueChange={(value) => addArrayFilter('status', value)}>
-                    <SelectTrigger className="backdrop-blur-sm bg-white/95 border-white/50 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200/50 transition-all duration-200">
+                    <SelectTrigger className="backdrop-blur-sm bg-white/80 border-white/30">
                       <SelectValue placeholder="Select status..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -179,12 +166,12 @@ export const TopFilterSection = ({ filters, onFiltersChange, data }: TopFilterSe
                   </Select>
                   <div className="flex flex-wrap gap-1">
                     {filters.status.map(status => (
-                      <Badge key={status} variant="secondary" className="bg-indigo-100 text-indigo-800 hover:bg-indigo-200 transition-colors">
+                      <Badge key={status} variant="secondary" className="bg-blue-100 text-blue-800">
                         {status}
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-4 w-4 p-0 ml-1 hover:bg-indigo-200"
+                          className="h-4 w-4 p-0 ml-1"
                           onClick={() => removeArrayFilter('status', status)}
                         >
                           <X className="h-3 w-3" />
@@ -201,7 +188,7 @@ export const TopFilterSection = ({ filters, onFiltersChange, data }: TopFilterSe
                     Location
                   </label>
                   <Select onValueChange={(value) => addArrayFilter('location', value)}>
-                    <SelectTrigger className="backdrop-blur-sm bg-white/95 border-white/50 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200/50 transition-all duration-200">
+                    <SelectTrigger className="backdrop-blur-sm bg-white/80 border-white/30">
                       <SelectValue placeholder="Select location..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -214,12 +201,12 @@ export const TopFilterSection = ({ filters, onFiltersChange, data }: TopFilterSe
                   </Select>
                   <div className="flex flex-wrap gap-1">
                     {filters.location.map(location => (
-                      <Badge key={location} variant="secondary" className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition-colors">
+                      <Badge key={location} variant="secondary" className="bg-green-100 text-green-800">
                         {location}
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-4 w-4 p-0 ml-1 hover:bg-emerald-200"
+                          className="h-4 w-4 p-0 ml-1"
                           onClick={() => removeArrayFilter('location', location)}
                         >
                           <X className="h-3 w-3" />
@@ -236,7 +223,7 @@ export const TopFilterSection = ({ filters, onFiltersChange, data }: TopFilterSe
                     Membership Type
                   </label>
                   <Select onValueChange={(value) => addArrayFilter('membershipType', value)}>
-                    <SelectTrigger className="backdrop-blur-sm bg-white/95 border-white/50 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200/50 transition-all duration-200">
+                    <SelectTrigger className="backdrop-blur-sm bg-white/80 border-white/30">
                       <SelectValue placeholder="Select membership..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -249,12 +236,12 @@ export const TopFilterSection = ({ filters, onFiltersChange, data }: TopFilterSe
                   </Select>
                   <div className="flex flex-wrap gap-1">
                     {filters.membershipType.map(type => (
-                      <Badge key={type} variant="secondary" className="bg-purple-100 text-purple-800 hover:bg-purple-200 transition-colors">
+                      <Badge key={type} variant="secondary" className="bg-purple-100 text-purple-800">
                         {type}
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-4 w-4 p-0 ml-1 hover:bg-purple-200"
+                          className="h-4 w-4 p-0 ml-1"
                           onClick={() => removeArrayFilter('membershipType', type)}
                         >
                           <X className="h-3 w-3" />
