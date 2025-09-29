@@ -20,6 +20,13 @@ export interface MembershipData {
   comments?: string;
   notes?: string;
   tags?: string[];
+  // AI-generated tags
+  aiTags?: string[];
+  aiAnalysisDate?: string;
+  aiConfidence?: number;
+  aiReasoning?: string;
+  aiSentiment?: string;
+  aiChurnRisk?: string;
   // Legacy field for backward compatibility
   sessionsLeft?: number;
 }

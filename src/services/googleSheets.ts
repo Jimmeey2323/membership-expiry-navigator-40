@@ -1,3 +1,5 @@
+import { MembershipData } from "@/types/membership";
+
 interface GoogleOAuthConfig {
   CLIENT_ID: string;
   CLIENT_SECRET: string;
@@ -47,7 +49,7 @@ class GoogleSheetsService {
   async fetchSheetData(): Promise<any[][]> {
     try {
       const accessToken = await this.getAccessToken();
-      const range = `${this.sheetName}!A:P`;
+      const range = `${this.sheetName}!A:R`;
       
       const response = await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}/values/${range}`,
@@ -73,7 +75,7 @@ class GoogleSheetsService {
   async fetchAnnotations(): Promise<any[][]> {
     try {
       const accessToken = await this.getAccessToken();
-      const range = `${this.annotationsSheetName}!A:G`; // Extended to include Unique ID column
+      const range = `${this.annotationsSheetName}!A:H`;
       
       const response = await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}/values/${range}`,
@@ -85,20 +87,22 @@ class GoogleSheetsService {
       );
 
       if (!response.ok) {
-        // If sheet doesn't exist, create it
-        await this.createAnnotationsSheet();
-        return [['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Last Updated', 'Unique ID']];
+        if (response.status === 404 || response.status === 400) {
+          await this.createAnnotationsSheetIfNeeded();
+          return [['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Unique ID', 'Associate Name', 'Timestamp']];
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
       return data.values || [];
     } catch (error) {
       console.error('Error fetching annotations:', error);
-      return [['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Last Updated', 'Unique ID']];
+      throw error;
     }
   }
 
-  async createAnnotationsSheet(): Promise<void> {
+  private async createAnnotationsSheetIfNeeded(): Promise<void> {
     try {
       const accessToken = await this.getAccessToken();
       
@@ -122,23 +126,49 @@ class GoogleSheetsService {
         }
       );
 
-      if (!response.ok) {
-        throw new Error('Failed to create annotations sheet');
+      if (response.ok) {
+        await this.updateAnnotations([
+          ['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Unique ID', 'Associate Name', 'Timestamp']
+        ]);
       }
-
-      // Add headers
-      await this.updateAnnotations([
-        ['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Last Updated', 'Unique ID']
-      ]);
     } catch (error) {
       console.error('Error creating annotations sheet:', error);
     }
   }
 
-  async updateAnnotations(values: any[][]): Promise<void> {
+  private async updateAnnotations(data: any[][]): Promise<void> {
     try {
       const accessToken = await this.getAccessToken();
-      const range = `${this.annotationsSheetName}!A:G`; // Extended to include Unique ID column
+      const range = `${this.annotationsSheetName}!A:H`;
+      
+      const response = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}/values/${range}?valueInputOption=USER_ENTERED`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            values: data
+          })
+        }
+      );
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+    } catch (error) {
+      console.error('Error updating annotations:', error);
+      throw error;
+    }
+  }
+
+  async updateMemberData(values: any[][]): Promise<void> {
+    try {
+      const accessToken = await this.getAccessToken();
+      const range = `${this.sheetName}!A:R`;
       
       const response = await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}/values/${range}?valueInputOption=RAW`,
@@ -155,182 +185,272 @@ class GoogleSheetsService {
       );
 
       if (!response.ok) {
-        throw new Error('Failed to update annotations');
+        throw new Error('Failed to update member data');
       }
     } catch (error) {
-      console.error('Error updating annotations:', error);
+      console.error('Error updating member data:', error);
+      throw error;
+    }
+  }
+
+  async updateSingleMember(member: any): Promise<void> {
+    try {
+      const currentData = await this.fetchSheetData();
+      if (currentData.length === 0) return;
+
+      const [headers, ...rows] = currentData;
+      
+      const memberIndex = rows.findIndex(row => 
+        (member.uniqueId && row[0] === member.uniqueId) || 
+        row[1] === member.memberId
+      );
+
+      if (memberIndex === -1) {
+        throw new Error('Member not found in sheet');
+      }
+
+      // If this is an annotation-only update, preserve all other data
+      const updatedRow = member._annotationOnly ? [
+        rows[memberIndex][0] || '', // Preserve existing uniqueId
+        rows[memberIndex][1] || '', // Preserve existing memberId  
+        rows[memberIndex][2] || '', // Preserve existing firstName
+        rows[memberIndex][3] || '', // Preserve existing lastName
+        rows[memberIndex][4] || '', // Preserve existing email
+        rows[memberIndex][5] || '', // Preserve existing membershipName
+        rows[memberIndex][6] || '', // Preserve existing endDate
+        rows[memberIndex][7] || '', // Preserve existing location
+        rows[memberIndex][8] || '', // Preserve existing currentUsage
+        rows[memberIndex][9] || '', // Preserve existing itemId
+        rows[memberIndex][10] || '', // Preserve existing orderDate
+        rows[memberIndex][11] || '', // Preserve existing soldBy
+        rows[memberIndex][12] || '', // Preserve existing membershipId
+        rows[memberIndex][13] || '', // Preserve existing frozen
+        rows[memberIndex][14] || '', // Preserve existing paid
+        rows[memberIndex][15] || 'Active', // Preserve existing status
+        member.comments || rows[memberIndex][16] || '', // Update comments
+        member.notes || rows[memberIndex][17] || '' // Update notes
+      ] : [
+        member.uniqueId || rows[memberIndex][0] || '',
+        member.memberId || rows[memberIndex][1] || '',
+        member.firstName || rows[memberIndex][2] || '',
+        member.lastName || rows[memberIndex][3] || '',
+        member.email || rows[memberIndex][4] || '',
+        (member.membershipName !== undefined && member.membershipName !== null && member.membershipName.trim() !== '') 
+          ? member.membershipName : rows[memberIndex][5] || '',
+        member.endDate || rows[memberIndex][6] || '',
+        (member.location !== undefined && member.location !== null && member.location.trim() !== '') 
+          ? member.location : rows[memberIndex][7] || '',
+        member.currentUsage || rows[memberIndex][8] || '',
+        member.itemId || rows[memberIndex][9] || '',
+        member.orderDate || rows[memberIndex][10] || '',
+        member.soldBy || rows[memberIndex][11] || '',
+        member.membershipId || rows[memberIndex][12] || '',
+        member.frozen || rows[memberIndex][13] || '',
+        member.paid || rows[memberIndex][14] || '',
+        member.status || rows[memberIndex][15] || 'Active',
+        member.comments || rows[memberIndex][16] || '',
+        member.notes || rows[memberIndex][17] || ''
+      ];
+      
+      rows[memberIndex] = updatedRow;
+      await this.updateMemberData([headers, ...rows]);
+    } catch (error) {
+      console.error('Error updating single member:', error);
       throw error;
     }
   }
 
   async saveAnnotation(memberId: string, email: string, comments: string, notes: string, tags: string[], uniqueId?: string, associateName?: string, customTimestamp?: string): Promise<void> {
     try {
+      // Save to Member_Annotations sheet first
       const annotationsData = await this.fetchAnnotations();
-      // Try to find by uniqueId first, then by memberId for backward compatibility
-      const existingIndex = annotationsData.findIndex(row => 
-        (uniqueId && row[6] === uniqueId) || row[0] === memberId
+      
+      const existingIndex = annotationsData.findIndex((row, index) => 
+        index > 0 && row[0] === memberId
       );
+      
       const timestamp = customTimestamp || new Date().toISOString();
-      const tagsString = tags.join(', ');
+      const newRow = [
+        memberId,
+        email,
+        comments || '',
+        notes || '',
+        tags.join(', '),
+        uniqueId || '',
+        associateName || '',
+        timestamp
+      ];
       
-      const newRow = [memberId, email, comments, notes, tagsString, timestamp, uniqueId || '', associateName || ''];
-      
-      if (existingIndex >= 0) {
-        // Update existing row
+      if (existingIndex !== -1) {
         annotationsData[existingIndex] = newRow;
       } else {
-        // Add new row
         annotationsData.push(newRow);
       }
       
       await this.updateAnnotations(annotationsData);
+      
+      // Also update the main Expirations sheet to keep both in sync
+      await this.updateSingleMember({
+        memberId,
+        comments,
+        notes,
+        // Don't overwrite other fields, just update annotations
+        _annotationOnly: true
+      });
+      
     } catch (error) {
       console.error('Error saving annotation:', error);
       throw error;
     }
   }
 
-  async getMembershipData() {
+  async getMembershipData(): Promise<MembershipData[]> {
     try {
-      const [rawData, annotationsData] = await Promise.all([
-        this.fetchSheetData(),
-        this.fetchAnnotations()
-      ]);
+      const rawData = await this.fetchSheetData();
       
-      if (rawData.length === 0) return [];
-
-      // Skip header row and transform data
+      if (!rawData || rawData.length === 0) {
+        return [];
+      }
+      
       const [headers, ...rows] = rawData;
-      const [annotationHeaders, ...annotationRows] = annotationsData;
       
-      // Create a map of annotations by both member ID and unique ID for better matching
-      const annotationsMap = new Map();
-      annotationRows.forEach(row => {
-        if (row[0]) { // if member ID exists
-          const annotation = {
-            comments: row[2] || '',
-            notes: row[3] || '',
-            tags: row[4] ? row[4].split(', ').filter(tag => tag.trim()) : []
-          };
+      const membershipData: MembershipData[] = rows.map((row: any[]) => ({
+        uniqueId: row[0] || '',
+        memberId: row[1] || '',
+        firstName: row[2] || '',
+        lastName: row[3] || '',
+        email: row[4] || '',
+        membershipName: row[5] || '',
+        endDate: row[6] || '',
+        location: row[7] || '',
+        currentUsage: row[8] || '',
+        itemId: row[9] || '',
+        orderDate: row[10] || '',
+        soldBy: row[11] || '',
+        membershipId: row[12] || '',
+        frozen: row[13] || '',
+        paid: row[14] || '',
+        status: row[15] || 'Active',
+        comments: row[16] || '',
+        notes: row[17] || '',
+        tags: [],
+        aiTags: []
+      }));
+      
+      // Fetch and merge annotation data
+      try {
+        const annotationsData = await this.fetchAnnotations();
+        const [annotationHeaders, ...annotationRows] = annotationsData;
+        
+        for (const annotationRow of annotationRows) {
+          const [memberId, email, comments, notes, tags] = annotationRow;
           
-          // Map by member ID (for backward compatibility)
-          annotationsMap.set(row[0], annotation);
+          const member = membershipData.find(m => m.memberId === memberId);
           
-          // Also map by unique ID if available (for better precision)
-          if (row[6]) {
-            annotationsMap.set(row[6], annotation);
+          if (member) {
+            if (comments && comments.trim()) {
+              member.comments = comments;
+            }
+            
+            if (notes && notes.trim()) {
+              member.notes = notes;
+            }
+            
+            if (tags && tags.trim()) {
+              member.tags = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+            }
           }
         }
-      });
+      } catch (error) {
+        // Annotation fetch failed - continue without annotations
+      }
       
-      return rows.map(row => {
-        const memberId = row[1] || '';
-        const uniqueId = row[0] || '';
-        
-        // Try to get annotation by unique ID first, then by member ID
-        const annotations = annotationsMap.get(uniqueId) || annotationsMap.get(memberId) || { comments: '', notes: '', tags: [] };
-        
-        // Map to new data structure:
-        // Unique Id, Member ID, First Name, Last Name, Email, Membership Name, End Date, Home Location, Current Usage, Id, Order At, Sold By, Membership Id, Frozen, Paid, Status
-        return {
-          uniqueId: row[0] || '',
-          memberId: memberId,
-          firstName: row[2] || '',
-          lastName: row[3] || '',
-          email: row[4] || '',
-          membershipName: row[5] || '',
-          endDate: row[6] || '',
-          location: row[7] || '', // Home Location
-          currentUsage: row[8] || '', // Current Usage (new field)
-          itemId: row[9] || '', // Id
-          orderDate: row[10] || '', // Order At
-          soldBy: row[11] || '',
-          membershipId: row[12] || '',
-          frozen: row[13] || '',
-          paid: row[14] || '',
-          status: (row[15] as 'Active' | 'Churned' | 'Frozen') || 'Active',
-          sessionsLeft: 0, // Legacy field - set to 0 since it's no longer in sheet
-          comments: annotations.comments,
-          notes: annotations.notes,
-          tags: annotations.tags
-        };
-      });
+      // Auto-repair corrupted data
+      const corruptedRecords = membershipData.filter(m => 
+        (!m.membershipName || m.membershipName.trim() === '') || 
+        (!m.location || m.location.trim() === '')
+      );
+      
+      if (corruptedRecords.length > 0) {
+        await this.repairCorruptedData(membershipData);
+      }
+      
+      return membershipData;
     } catch (error) {
-      console.error('Error processing membership data:', error);
-      // Return mock data for development
-      return this.getMockData();
+      console.error('Error getting membership data:', error);
+      throw error;
     }
   }
 
-  private getMockData() {
-    return [
-      {
-        uniqueId: "15338991-Studio Annual Unlimited-undefined-2026-09-03T12:45:00.000Z",
-        memberId: "15338991",
-        firstName: "Maithili",
-        lastName: "Raut",
-        email: "maithili.raut@gmail.com",
-        membershipName: "Studio Annual Unlimited",
-        endDate: "2026-09-03, 18:15:00",
-        location: "Kwality House, Kemps Corner",
-        currentUsage: "-",
-        itemId: "-",
-        orderDate: "2026-09-03 18:15:00",
-        soldBy: "-",
-        membershipId: "-",
-        frozen: "FALSE",
-        paid: "-",
-        status: "Active" as const,
-        sessionsLeft: 0,
-        comments: "",
-        notes: "",
-        tags: []
-      },
-      {
-        uniqueId: "23555332-Studio Annual Unlimited-undefined-2026-09-02T04:00:00.000Z",
-        memberId: "23555332",
-        firstName: "Shona",
-        lastName: "Barua",
-        email: "shonabarua27@gmail.com",
-        membershipName: "Studio Annual Unlimited",
-        endDate: "2026-09-02, 09:30:00",
-        location: "Supreme HQ, Bandra",
-        currentUsage: "-",
-        itemId: "-",
-        orderDate: "2026-09-02 09:30:00",
-        soldBy: "-",
-        membershipId: "-",
-        frozen: "FALSE",
-        paid: "-",
-        status: "Active" as const,
-        sessionsLeft: 0,
-        comments: "",
-        notes: "",
-        tags: []
-      },
-      {
-        uniqueId: "110567-Studio 4 Class Package-39727200-2025-04-12T13:27:43.839Z",
-        memberId: "110567",
-        firstName: "Swathi",
-        lastName: "Mohan",
-        email: "swathimohan05@gmail.com",
-        membershipName: "Studio 4 Class Package",
-        endDate: "25/04/2025 19:30:00",
-        location: "Supreme HQ, Bandra",
-        currentUsage: "3 classes",
-        itemId: "39727200",
-        orderDate: "2025-04-12 18:57:43",
-        soldBy: "imran@physique57mumbai.com",
-        membershipId: "25768",
-        frozen: "-",
-        paid: "6313",
-        status: "Churned" as const,
-        sessionsLeft: 0,
-        comments: "",
-        notes: "",
-        tags: []
+  private async repairCorruptedData(membershipData: MembershipData[]): Promise<void> {
+    try {
+      const accessToken = await this.getAccessToken();
+      const allRows = await this.fetchSheetData();
+      
+      if (allRows.length === 0) return;
+      
+      const [headers, ...dataRows] = allRows;
+      let needsUpdate = false;
+      
+      for (const member of membershipData) {
+        const { memberId } = member;
+        
+        if (!member.membershipName || member.membershipName.trim() === '') {
+          const similarRecord = dataRows.find(r => 
+            r[1] === memberId && r[5] && r[5].trim() !== ''
+          );
+          
+          if (similarRecord) {
+            member.membershipName = similarRecord[5];
+            needsUpdate = true;
+          } else {
+            member.membershipName = 'Studio Annual Unlimited';
+            needsUpdate = true;
+          }
+        }
+        
+        if (!member.location || member.location.trim() === '') {
+          const similarRecord = dataRows.find(r => 
+            r[1] === memberId && r[7] && r[7].trim() !== ''
+          );
+          
+          if (similarRecord) {
+            member.location = similarRecord[7];
+            needsUpdate = true;
+          }
+        }
+        
+        if (needsUpdate) {
+          await this.updateSingleMember(member);
+        }
       }
-    ];
+    } catch (error) {
+      console.error('Error during data repair:', error);
+    }
+  }
+
+  // Method to clear AI tags for a member
+  async clearAITags(memberId: string): Promise<void> {
+    try {
+      const currentData = await this.fetchSheetData();
+      if (currentData.length === 0) return;
+
+      const [headers, ...rows] = currentData;
+      
+      const memberIndex = rows.findIndex(row => row[1] === memberId);
+      if (memberIndex === -1) {
+        throw new Error('Member not found in sheet');
+      }
+
+      // Clear AI tags column (assuming it's column S - index 18)
+      if (rows[memberIndex][18]) {
+        rows[memberIndex][18] = '';
+        await this.updateMemberData([headers, ...rows]);
+      }
+    } catch (error) {
+      console.error('Error clearing AI tags:', error);
+      throw error;
+    }
   }
 }
 

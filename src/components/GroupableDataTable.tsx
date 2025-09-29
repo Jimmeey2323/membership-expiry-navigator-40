@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,12 +62,7 @@ export const GroupableDataTable = ({
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [groupBy, setGroupBy] = useState<GroupByField>('none');
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  const [itemsPerPage, setItemsPerPage] = useState(25);
-
-  // Reset to first page when search term or groupBy changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, groupBy]);
+  const itemsPerPage = 25;
 
   // Helper functions for AI analysis styling
   const getSentimentColorClasses = (sentiment: string): string => {
@@ -178,11 +173,7 @@ export const GroupableDataTable = ({
 
   const groupedData = useMemo(() => {
     if (groupBy === 'none') {
-      // Apply pagination to ungrouped data
-      const startIndex = (currentPage - 1) * itemsPerPage;
-      const endIndex = startIndex + itemsPerPage;
-      const paginatedData = filteredAndSortedData.slice(startIndex, endIndex);
-      return { 'All Members': paginatedData };
+      return { 'All Members': filteredAndSortedData };
     }
 
     const groups: Record<string, MembershipData[]> = {};
@@ -213,27 +204,8 @@ export const GroupableDataTable = ({
       groups[groupKey].push(member);
     });
 
-    // Apply pagination to grouped data
-    if (groupBy !== 'none') {
-      const groupEntries = Object.entries(groups);
-      const startIndex = (currentPage - 1) * itemsPerPage;
-      const endIndex = startIndex + itemsPerPage;
-      
-      // For groups, we paginate the groups themselves, not individual members
-      const paginatedGroups = groupEntries.slice(startIndex, endIndex);
-      return Object.fromEntries(paginatedGroups);
-    }
-
     return groups;
-  }, [filteredAndSortedData, groupBy, currentPage, itemsPerPage]);
-
-  // Pagination calculations
-  const totalEntries = groupBy === 'none' 
-    ? filteredAndSortedData.length 
-    : Object.keys(groupedData).length;
-  const totalPages = Math.ceil(totalEntries / itemsPerPage);
-  const startEntry = (currentPage - 1) * itemsPerPage + 1;
-  const endEntry = Math.min(currentPage * itemsPerPage, totalEntries);
+  }, [filteredAndSortedData, groupBy]);
 
   const getGroupTotal = (members: MembershipData[]) => {
     return {
@@ -446,11 +418,11 @@ export const GroupableDataTable = ({
 
                     {/* Data Table - Now Collapsible */}
                     {!isGroupCollapsed(groupName) && (
-                    <div className="relative overflow-hidden rounded-2xl border-2 border-slate-200 bg-white shadow-xl animate-in slide-in-from-top-2 duration-300 border-l-4 border-r-4 border-l-black border-r-black">
+                    <div className="relative overflow-hidden rounded-2xl border-2 border-slate-200 bg-white shadow-xl animate-in slide-in-from-top-2 duration-300">
                       <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 via-transparent to-purple-50/30"></div>
                       <Table>
                         <TableHeader>
-                          <TableRow className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b-4 border-blue-500 h-14 hover:from-slate-800 hover:to-slate-800 transition-all duration-300">
+                          <TableRow className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b-2 border-slate-600 h-12 hover:from-slate-800 hover:to-slate-800 transition-all duration-300">
                             <TableHead className="text-white font-bold text-xs px-4 whitespace-nowrap">
                               <Button 
                                 variant="ghost" 
@@ -513,10 +485,10 @@ export const GroupableDataTable = ({
                             return (
                               <TableRow 
                                 key={member.uniqueId}
-                                className="hover:bg-gradient-to-r hover:from-blue-50/70 hover:to-indigo-50/70 transition-all duration-300 cursor-pointer h-[45px] max-h-[45px] border-b border-slate-100/80 group backdrop-blur-sm"
+                                className="hover:bg-gradient-to-r hover:from-blue-50/70 hover:to-indigo-50/70 transition-all duration-300 cursor-pointer h-[40px] max-h-[40px] border-b border-slate-100/80 group backdrop-blur-sm"
                                 onClick={() => handleRowClick(member)}
                               >
-                                <TableCell className="px-4 py-1 h-[45px] max-h-[45px] overflow-hidden">
+                                <TableCell className="px-4 py-1 h-[40px] max-h-[40px] overflow-hidden">
                                   <div className="flex items-center gap-2">
                                     <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-md">
                                       {member.firstName?.[0]}{member.lastName?.[0]}
@@ -525,7 +497,7 @@ export const GroupableDataTable = ({
                                   </div>
                                 </TableCell>
                                 
-                                <TableCell className="px-4 py-1 h-[45px] max-h-[45px] overflow-hidden">
+                                <TableCell className="px-4 py-1 h-[40px] max-h-[40px] overflow-hidden">
                                   <div className="flex flex-col justify-center h-full">
                                     <span className="font-semibold text-slate-900 text-sm truncate">
                                       {member.firstName} {member.lastName}
@@ -536,7 +508,7 @@ export const GroupableDataTable = ({
                                   </div>
                                 </TableCell>
                                 
-                                <TableCell className="px-4 py-1 h-[45px] max-h-[45px] overflow-hidden">
+                                <TableCell className="px-4 py-1 h-[35px]">
                                   <div className="flex items-center gap-1">
                                     {getMembershipIcon(member.membershipName)}
                                     <span className="text-xs text-slate-700 font-medium truncate">
@@ -545,11 +517,11 @@ export const GroupableDataTable = ({
                                   </div>
                                 </TableCell>
                                 
-                                <TableCell className="px-4 py-1 h-[45px] max-h-[45px] overflow-hidden">
+                                <TableCell className="px-4 py-1 h-[35px]">
                                   {getStatusBadge(member.status)}
                                 </TableCell>
                                 
-                                <TableCell className="px-4 py-1 h-[45px] max-h-[45px] overflow-hidden">
+                                <TableCell className="px-4 py-1 h-[35px]">
                                   <div className="flex items-center gap-1">
                                     <Calendar className="h-3 w-3 text-slate-400" />
                                     <div className="flex flex-col">
@@ -570,14 +542,14 @@ export const GroupableDataTable = ({
                                   </div>
                                 </TableCell>
                                 
-                                <TableCell className="px-4 py-1 h-[45px] max-h-[45px] overflow-hidden">
+                                <TableCell className="px-4 py-1 h-[35px]">
                                   <div className="flex items-center gap-1">
                                     <MapPin className="h-3 w-3 text-slate-400" />
                                     <span className="text-xs text-slate-700 font-medium truncate">{member.location}</span>
                                   </div>
                                 </TableCell>
                                 
-                                <TableCell className="px-6 py-1 h-[45px] max-h-[45px] overflow-hidden min-w-[200px] max-w-[250px]">
+                                <TableCell className="px-6 py-1 h-[40px] max-h-[40px] overflow-hidden min-w-[200px] max-w-[250px]">
                                   {member.comments ? (
                                     <TooltipProvider>
                                       <Tooltip>
@@ -599,7 +571,7 @@ export const GroupableDataTable = ({
                                   )}
                                 </TableCell>
                                 
-                                <TableCell className="px-6 py-1 h-[45px] max-h-[45px] overflow-hidden min-w-[200px] max-w-[250px]">
+                                <TableCell className="px-6 py-1 h-[40px] max-h-[40px] overflow-hidden min-w-[200px] max-w-[250px]">
                                   {member.notes ? (
                                     <TooltipProvider>
                                       <Tooltip>
@@ -621,7 +593,7 @@ export const GroupableDataTable = ({
                                   )}
                                 </TableCell>
                                 
-                                <TableCell className="px-4 py-1 h-[45px] max-h-[45px] overflow-hidden">
+                                <TableCell className="px-4 py-1 h-[40px] max-h-[40px] overflow-hidden">
                                   <div className="flex flex-wrap gap-1">
                                     {member.tags?.slice(0, 2).map((tag, index) => (
                                       <Badge key={index} variant="secondary" className="text-xs px-1 py-0 bg-slate-100 text-slate-700 h-4">
@@ -646,7 +618,7 @@ export const GroupableDataTable = ({
                                   </div>
                                 </TableCell>
                                 
-                                <TableCell className="px-4 py-1 h-[45px] max-h-[45px] overflow-hidden">
+                                <TableCell className="px-4 py-1 h-[35px]">
                                   <div className="flex items-center gap-1">
                                     {onEditMember && (
                                       <Button
@@ -691,15 +663,12 @@ export const GroupableDataTable = ({
               <div className="flex items-center justify-between border-t border-slate-200/60 pt-6">
                 <div className="flex items-center gap-4">
                   <span className="text-sm text-slate-600 font-medium">
-                    Showing {startEntry} to {endEntry} of {totalEntries} {groupBy === 'none' ? 'entries' : 'groups'}
+                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, Object.values(groupedData).reduce((total, group) => total + group.length, 0))} of {Object.values(groupedData).reduce((total, group) => total + group.length, 0)} entries
                   </span>
                   <select 
                     className="px-3 py-1 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     value={itemsPerPage}
-                    onChange={(e) => {
-                      setItemsPerPage(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
+                    onChange={(e) => setCurrentPage(1)} // Reset to first page when changing items per page
                   >
                     <option value={10}>10 per page</option>
                     <option value={25}>25 per page</option>
@@ -722,7 +691,7 @@ export const GroupableDataTable = ({
                   
                   {/* Page Numbers */}
                   <div className="flex items-center gap-1">
-                    {totalPages > 0 && [...Array(totalPages)].slice(Math.max(0, currentPage - 3), Math.min(totalPages, currentPage + 2)).map((_, index) => {
+                    {[...Array(Math.ceil(Object.values(groupedData).reduce((total, group) => total + group.length, 0) / itemsPerPage))].slice(Math.max(0, currentPage - 3), currentPage + 2).map((_, index) => {
                       const pageNum = Math.max(0, currentPage - 3) + index + 1;
                       return (
                         <Button
@@ -746,8 +715,8 @@ export const GroupableDataTable = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages || totalPages === 0}
+                    onClick={() => setCurrentPage(prev => Math.min(Math.ceil(Object.values(groupedData).reduce((total, group) => total + group.length, 0) / itemsPerPage), prev + 1))}
+                    disabled={currentPage === Math.ceil(Object.values(groupedData).reduce((total, group) => total + group.length, 0) / itemsPerPage)}
                     className="h-10 px-4 bg-white hover:bg-blue-50 border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   >
                     Next

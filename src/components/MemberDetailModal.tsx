@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState, useRef, useEffect } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,15 +9,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   X, Plus, Save, User, Mail, Calendar, MapPin, 
   Activity, CreditCard, MessageSquare, FileText, 
   Tag, Clock, TrendingUp, AlertCircle, Star,
-  Phone, Building, Users
+  Phone, Building, Users, Edit2, Check, UserCircle, Brain
 } from "lucide-react";
 import { MembershipData } from "@/types/membership";
 import { googleSheetsService } from "@/services/googleSheets";
 import { toast } from "sonner";
+import { cleanText, toSentenceCase } from "@/lib/textUtils";
 
 interface MemberDetailModalProps {
   member: MembershipData | null;
@@ -31,39 +33,195 @@ interface Comment {
   text: string;
   timestamp: Date;
   type: 'comment' | 'note';
+  createdBy?: string; // Name of the person who created this
+  lastEditedBy?: string; // Name of the person who last edited this
+  lastEditedAt?: Date; // When it was last edited
 }
 
+interface TagEntry {
+  tag: string;
+  createdBy: string;
+  timestamp: Date;
+}
+
+const STAFF_NAMES = [
+  "Admin Admin",
+  "Akshay Rane", 
+  "Api Serou",
+  "Imran Shaikh",
+  "Manisha Rathod",
+  "Nadiya Shaikh", 
+  "Pavanthika",
+  "Prathap Kp",
+  "Priyanka Abnave",
+  "Santhosh Kumar",
+  "Sheetal Kataria",
+  "Shipra Bhika", 
+  "Tahira Sayyed",
+  "Vahishta Fitter",
+  "Zaheer Agarbattiwala",
+  "Zahur Shaikh"
+];
+
 export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDetailModalProps) => {
-  const [comments, setComments] = useState<Comment[]>(() => {
-    if (member?.comments) {
-      return member.comments.split('\n---\n').map((text, index) => ({
-        id: (index + 1).toString(),
-        text: text.trim(),
-        timestamp: new Date(),
-        type: 'comment' as const
-      })).filter(c => c.text);
-    }
-    return [];
-  });
-  
-  const [notes, setNotes] = useState<Comment[]>(() => {
-    if (member?.notes) {
-      return member.notes.split('\n---\n').map((text, index) => ({
-        id: (index + 1).toString(),
-        text: text.trim(),
-        timestamp: new Date(),
-        type: 'note' as const
-      })).filter(n => n.text);
-    }
-    return [];
-  });
-  
-  const [tags, setTags] = useState<string[]>(member?.tags || []);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [notes, setNotes] = useState<Comment[]>([]);
+  const [tags, setTags] = useState<TagEntry[]>([]);
   const [newComment, setNewComment] = useState('');
   const [newNote, setNewNote] = useState('');
   const [newTag, setNewTag] = useState('');
+  const [selectedName, setSelectedName] = useState(STAFF_NAMES[0]); // Default to first name
+  const [editingComment, setEditingComment] = useState<string | null>(null);
+  const [editingNote, setEditingNote] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Helper functions for AI analysis styling
+  const getSentimentBadgeClass = (sentiment: string): string => {
+    const colorMap: Record<string, string> = {
+      'positive': 'bg-green-100 text-green-700 border-green-200',
+      'neutral': 'bg-gray-100 text-gray-700 border-gray-200',
+      'negative': 'bg-red-100 text-red-700 border-red-200',
+      'mixed': 'bg-yellow-100 text-yellow-700 border-yellow-200'
+    };
+    return colorMap[sentiment] || 'bg-gray-100 text-gray-700 border-gray-200';
+  };
+
+  const getSentimentEmoji = (sentiment: string): string => {
+    const emojiMap: Record<string, string> = {
+      'positive': '😊',
+      'neutral': '😐',
+      'negative': '😞',
+      'mixed': '🤔'
+    };
+    return emojiMap[sentiment] || '😐';
+  };
+
+  const getChurnRiskBadgeClass = (churnRisk: string): string => {
+    const colorMap: Record<string, string> = {
+      'low': 'bg-green-100 text-green-700 border-green-200',
+      'medium': 'bg-orange-100 text-orange-700 border-orange-200',
+      'high': 'bg-red-100 text-red-700 border-red-200'
+    };
+    return colorMap[churnRisk] || 'bg-gray-100 text-gray-700 border-gray-200';
+  };
+
+  const getChurnRiskEmoji = (churnRisk: string): string => {
+    const emojiMap: Record<string, string> = {
+      'low': '🟢',
+      'medium': '🟡',
+      'high': '🔴'
+    };
+    return emojiMap[churnRisk] || '⚪';
+  };
+
+  // Parse comments function
+  const parseComments = (commentsString: string): Comment[] => {
+    if (!commentsString) return [];
+    
+    return commentsString.split('\n---\n').map((text, index) => {
+      const lines = text.trim().split('\n');
+      let actualText = '';
+      let createdBy = 'Unknown';
+      let lastEditedBy = '';
+      let timestamp = new Date();
+      let lastEditedAt: Date | undefined;
+
+      for (const line of lines) {
+        if (line.startsWith('[Created by:')) {
+          const match = line.match(/\[Created by: (.+?) at (.+?)\]/);
+          if (match) {
+            createdBy = match[1];
+            timestamp = new Date(match[2]);
+          }
+        } else if (line.startsWith('[Last edited by:')) {
+          const match = line.match(/\[Last edited by: (.+?) at (.+?)\]/);
+          if (match) {
+            lastEditedBy = match[1];
+            lastEditedAt = new Date(match[2]);
+          }
+        } else if (!line.startsWith('[')) {
+          actualText += (actualText ? '\n' : '') + line;
+        }
+      }
+
+      return {
+        id: (index + 1).toString(),
+        text: actualText,
+        timestamp,
+        type: 'comment' as const,
+        createdBy,
+        lastEditedBy: lastEditedBy || undefined,
+        lastEditedAt
+      };
+    }).filter(c => c.text);
+  };
+
+  // Parse notes function
+  const parseNotes = (notesString: string): Comment[] => {
+    if (!notesString) return [];
+    
+    return notesString.split('\n---\n').map((text, index) => {
+      const lines = text.trim().split('\n');
+      let actualText = '';
+      let createdBy = 'Unknown';
+      let lastEditedBy = '';
+      let timestamp = new Date();
+      let lastEditedAt: Date | undefined;
+
+      for (const line of lines) {
+        if (line.startsWith('[Created by:')) {
+          const match = line.match(/\[Created by: (.+?) at (.+?)\]/);
+          if (match) {
+            createdBy = match[1];
+            timestamp = new Date(match[2]);
+          }
+        } else if (line.startsWith('[Last edited by:')) {
+          const match = line.match(/\[Last edited by: (.+?) at (.+?)\]/);
+          if (match) {
+            lastEditedBy = match[1];
+            lastEditedAt = new Date(match[2]);
+          }
+        } else if (!line.startsWith('[')) {
+          actualText += (actualText ? '\n' : '') + line;
+        }
+      }
+
+      return {
+        id: (index + 1).toString(),
+        text: actualText,
+        timestamp,
+        type: 'note' as const,
+        createdBy,
+        lastEditedBy: lastEditedBy || undefined,
+        lastEditedAt
+      };
+    }).filter(n => n.text);
+  };
+
+  // Update state when member changes
+  useEffect(() => {
+    if (member) {
+      const parsedComments = parseComments(member.comments || '');
+      const parsedNotes = parseNotes(member.notes || '');
+      
+      // Convert string tags to TagEntry format for backward compatibility
+      const parsedTags: TagEntry[] = (member.tags || []).map(tag => ({
+        tag,
+        createdBy: 'Unknown', // Legacy tags don't have creator info
+        timestamp: new Date()
+      }));
+      
+      setComments(parsedComments);
+      setNotes(parsedNotes);
+      setTags(parsedTags);
+    } else {
+      setComments([]);
+      setNotes([]);
+      setTags([]);
+    }
+  }, [member]);
 
   const getDaysUntilExpiry = (endDate: string) => {
     const today = new Date();
@@ -73,37 +231,102 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
   };
 
   const addComment = () => {
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || !selectedName) return;
     const comment: Comment = {
       id: Date.now().toString(),
       text: newComment,
       timestamp: new Date(),
-      type: 'comment' as const
+      type: 'comment' as const,
+      createdBy: selectedName
     };
     setComments(prev => [...prev, comment]);
     setNewComment('');
+    // Keep the selected name for convenience when adding multiple entries
   };
 
   const addNote = () => {
-    if (!newNote.trim()) return;
+    if (!newNote.trim() || !selectedName) return;
     const note: Comment = {
       id: Date.now().toString(),
       text: newNote,
       timestamp: new Date(),
-      type: 'note' as const
+      type: 'note' as const,
+      createdBy: selectedName
     };
     setNotes(prev => [...prev, note]);
     setNewNote('');
+    // Keep the selected name for convenience when adding multiple entries
+  };
+
+  const startEditingComment = (comment: Comment) => {
+    setEditingComment(comment.id);
+    setEditText(comment.text);
+    setSelectedName(comment.lastEditedBy || comment.createdBy || STAFF_NAMES[0]); // Set to last editor or creator
+  };
+
+  const startEditingNote = (note: Comment) => {
+    setEditingNote(note.id);
+    setEditText(note.text);
+    setSelectedName(note.lastEditedBy || note.createdBy || STAFF_NAMES[0]); // Set to last editor or creator
+  };
+
+  const saveEditComment = (commentId: string) => {
+    if (!editText.trim() || !selectedName) return;
+    
+    setComments(prev => prev.map(comment => 
+      comment.id === commentId 
+        ? {
+            ...comment,
+            text: editText.trim(),
+            lastEditedBy: selectedName,
+            lastEditedAt: new Date()
+          }
+        : comment
+    ));
+    setEditingComment(null);
+    setEditText('');
+  };
+
+  const saveEditNote = (noteId: string) => {
+    if (!editText.trim() || !selectedName) return;
+    
+    setNotes(prev => prev.map(note => 
+      note.id === noteId 
+        ? {
+            ...note,
+            text: editText.trim(),
+            lastEditedBy: selectedName,
+            lastEditedAt: new Date()
+          }
+        : note
+    ));
+    setEditingNote(null);
+    setEditText('');
+  };
+
+  const cancelEdit = () => {
+    setEditingComment(null);
+    setEditingNote(null);
+    setEditText('');
+    setSelectedName(STAFF_NAMES[0]); // Reset to default name
   };
 
   const addTag = () => {
-    if (!newTag.trim() || tags.includes(newTag.trim())) return;
-    setTags(prev => [...prev, newTag.trim()]);
+    if (!newTag.trim() || !selectedName) return;
+    // Check if tag already exists
+    if (tags.some(tagEntry => tagEntry.tag === newTag.trim())) return;
+    
+    const newTagEntry: TagEntry = {
+      tag: newTag.trim(),
+      createdBy: selectedName,
+      timestamp: new Date()
+    };
+    setTags(prev => [...prev, newTagEntry]);
     setNewTag('');
   };
 
-  const removeTag = (tagToRemove: string) => {
-    setTags(prev => prev.filter(tag => tag !== tagToRemove));
+  const removeTag = (tagToRemove: TagEntry) => {
+    setTags(prev => prev.filter(tagEntry => tagEntry.tag !== tagToRemove.tag));
   };
 
   const removeComment = (id: string) => {
@@ -119,19 +342,42 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     
     setIsSaving(true);
     try {
-      const allComments = comments.map(c => c.text).join('\n---\n');
-      const allNotes = notes.map(n => n.text).join('\n---\n');
+      // Enhanced format to include creator and editor information with cleaned text
+      const allComments = comments.map(c => {
+        let formatted = toSentenceCase(cleanText(c.text));
+        if (c.createdBy) {
+          formatted += `\n[Created by: ${c.createdBy} at ${c.timestamp.toLocaleString()}]`;
+        }
+        if (c.lastEditedBy && c.lastEditedAt) {
+          formatted += `\n[Last edited by: ${c.lastEditedBy} at ${c.lastEditedAt.toLocaleString()}]`;
+        }
+        return formatted;
+      }).join('\n---\n');
+      
+      const allNotes = notes.map(n => {
+        let formatted = toSentenceCase(cleanText(n.text));
+        if (n.createdBy) {
+          formatted += `\n[Created by: ${n.createdBy} at ${n.timestamp.toLocaleString()}]`;
+        }
+        if (n.lastEditedBy && n.lastEditedAt) {
+          formatted += `\n[Last edited by: ${n.lastEditedBy} at ${n.lastEditedAt.toLocaleString()}]`;
+        }
+        return formatted;
+      }).join('\n---\n');
+
+      // Convert TagEntry back to string array for saving
+      const tagsForSaving = tags.map(tagEntry => tagEntry.tag);
       
       await googleSheetsService.saveAnnotation(
         member.memberId,
         member.email,
         allComments,
         allNotes,
-        tags,
+        tagsForSaving,
         member.uniqueId // Add unique ID for better persistence
       );
       
-      onSave(member.uniqueId || member.memberId, allComments, allNotes, tags);
+      onSave(member.memberId, allComments, allNotes, tagsForSaving);
       toast.success("Member details saved successfully!");
       onClose();
     } catch (error) {
@@ -173,6 +419,9 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                       </p>
                     </div>
                   </DialogTitle>
+                  <DialogDescription className="text-blue-100 text-base mt-2 max-w-lg">
+                    View comprehensive member details, membership history, and analytics.
+                  </DialogDescription>
                   <Button
                     variant="ghost" 
                     size="icon"
@@ -367,9 +616,18 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                           {notes.slice(0, 3).map((note) => (
                             <div key={note.id} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
                               <p className="text-slate-900 dark:text-white text-sm mb-2">{note.text}</p>
-                              <p className="text-xs text-slate-500">
-                                {note.timestamp.toLocaleString()}
-                              </p>
+                              <div className="flex items-center gap-2 text-xs text-slate-500">
+                                <UserCircle className="h-3 w-3" />
+                                <span>{note.createdBy || 'Unknown'}</span>
+                                <span>•</span>
+                                <span>{note.timestamp.toLocaleString()}</span>
+                                {note.lastEditedBy && (
+                                  <>
+                                    <span>•</span>
+                                    <span>Edited by {note.lastEditedBy}</span>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           ))}
                           {notes.length > 3 && (
@@ -407,9 +665,18 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                           {comments.slice(0, 3).map((comment) => (
                             <div key={comment.id} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
                               <p className="text-slate-900 dark:text-white text-sm mb-2">{comment.text}</p>
-                              <p className="text-xs text-slate-500">
-                                {comment.timestamp.toLocaleString()}
-                              </p>
+                              <div className="flex items-center gap-2 text-xs text-slate-500">
+                                <UserCircle className="h-3 w-3" />
+                                <span>{comment.createdBy || 'Unknown'}</span>
+                                <span>•</span>
+                                <span>{comment.timestamp.toLocaleString()}</span>
+                                {comment.lastEditedBy && (
+                                  <>
+                                    <span>•</span>
+                                    <span>Edited by {comment.lastEditedBy}</span>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           ))}
                           {comments.length > 3 && (
@@ -429,21 +696,190 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                     </Card>
                   </div>
                 )}
+
+                {/* Raw Data Section - Fallback if no parsed annotations */}
+                {(notes.length === 0 && comments.length === 0 && tags.length === 0) && 
+                 (member.notes || member.comments || (member.tags && member.tags.length > 0)) && (
+                  <div className="mt-8">
+                    <Card className="shadow-lg border-2">
+                      <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100">
+                        <CardTitle className="flex items-center gap-3">
+                          <div className="p-2 bg-gray-500 text-white rounded-lg">
+                            <FileText className="h-5 w-5" />
+                          </div>
+                          Raw Annotation Data
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-6 space-y-4">
+                        {member.notes && (
+                          <div>
+                            <Label className="text-sm font-semibold text-slate-600">Notes:</Label>
+                            <div className="p-3 bg-gray-50 rounded border mt-2">
+                              <pre className="text-sm whitespace-pre-wrap">{member.notes}</pre>
+                            </div>
+                          </div>
+                        )}
+                        {member.comments && (
+                          <div>
+                            <Label className="text-sm font-semibold text-slate-600">Comments:</Label>
+                            <div className="p-3 bg-gray-50 rounded border mt-2">
+                              <pre className="text-sm whitespace-pre-wrap">{member.comments}</pre>
+                            </div>
+                          </div>
+                        )}
+                        {member.tags && member.tags.length > 0 && (
+                          <div>
+                            <Label className="text-sm font-semibold text-slate-600">Tags:</Label>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {member.tags.map((tag, index) => (
+                                <Badge key={index} variant="outline">{tag}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {/* AI Tags Display */}
+                {member.aiTags && member.aiTags.length > 0 && (
+                  <div className="mt-8">
+                    <Card className="shadow-lg border-2">
+                      <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100">
+                        <CardTitle className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg">
+                              <Brain className="h-5 w-5" />
+                            </div>
+                            AI Analysis Results
+                            <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                              {member.aiConfidence}% confidence
+                            </Badge>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                await googleSheetsService.clearAITags(member.memberId);
+                                // Clear AI data locally
+                                const updatedMember = {
+                                  ...member,
+                                  aiTags: [],
+                                  aiConfidence: undefined,
+                                  aiReasoning: undefined,
+                                  aiSentiment: undefined,
+                                  aiChurnRisk: undefined,
+                                  aiAnalysisDate: undefined
+                                };
+                                onSave(member.memberId, member.comments || '', member.notes || '', member.tags || []);
+                                toast.success('AI tags cleared successfully');
+                                onClose();
+                              } catch (error) {
+                                console.error('Error clearing AI tags:', error);
+                                toast.error('Failed to clear AI tags');
+                              }
+                            }}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Clear AI Tags
+                          </Button>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-6 space-y-4">
+                        <div>
+                          <Label className="text-sm font-semibold text-slate-600">AI-Generated Tags:</Label>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {member.aiTags.map((tag, index) => (
+                              <Badge key={index} className="bg-purple-100 text-purple-800 border-purple-200">
+                                🤖 {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {/* Sentiment and Churn Risk */}
+                        <div className="grid grid-cols-2 gap-4">
+                          {member.aiSentiment && (
+                            <div>
+                              <Label className="text-sm font-semibold text-slate-600">Sentiment Analysis:</Label>
+                              <div className="mt-2">
+                                <Badge className={getSentimentBadgeClass(member.aiSentiment)}>
+                                  {getSentimentEmoji(member.aiSentiment)} {member.aiSentiment}
+                                </Badge>
+                              </div>
+                            </div>
+                          )}
+                          {member.aiChurnRisk && (
+                            <div>
+                              <Label className="text-sm font-semibold text-slate-600">Churn Risk Level:</Label>
+                              <div className="mt-2">
+                                <Badge className={getChurnRiskBadgeClass(member.aiChurnRisk)}>
+                                  {getChurnRiskEmoji(member.aiChurnRisk)} {member.aiChurnRisk} risk
+                                </Badge>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {member.aiReasoning && (
+                          <div>
+                            <Label className="text-sm font-semibold text-slate-600">AI Reasoning:</Label>
+                            <div className="p-3 bg-purple-50 rounded border border-purple-200 mt-2">
+                              <p className="text-sm text-slate-700">{member.aiReasoning}</p>
+                            </div>
+                          </div>
+                        )}
+                        {member.aiAnalysisDate && (
+                          <div>
+                            <Label className="text-sm font-semibold text-slate-600">Analysis Date:</Label>
+                            <p className="text-sm text-slate-600 mt-1">
+                              {new Date(member.aiAnalysisDate).toLocaleString()}
+                            </p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="comments" className="space-y-6">
                 <Card className="shadow-lg">
                   <CardHeader>
-                    <CardTitle>Add New Comment</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageSquare className="h-5 w-5" />
+                      Add New Comment
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="staff-select">Created by</Label>
+                      <Select value={selectedName} onValueChange={setSelectedName}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select staff member" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STAFF_NAMES.map((name) => (
+                            <SelectItem key={name} value={name}>
+                              <div className="flex items-center gap-2">
+                                <UserCircle className="h-4 w-4" />
+                                {name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <Textarea
                       placeholder="Add a comment about this member..."
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
                       className="min-h-[100px]"
                     />
-                    <Button onClick={addComment} disabled={!newComment.trim()}>
+                    <Button onClick={addComment} disabled={!newComment.trim() || !selectedName}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add Comment
                     </Button>
@@ -456,19 +892,91 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 space-y-2">
-                            <p className="text-slate-900 dark:text-white">{comment.text}</p>
-                            <p className="text-sm text-slate-500">
-                              {comment.timestamp.toLocaleString()}
-                            </p>
+                            {editingComment === comment.id ? (
+                              <div className="space-y-3">
+                                <div>
+                                  <Label htmlFor="edit-comment-name">Edited by</Label>
+                                  <Select value={selectedName} onValueChange={setSelectedName}>
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue placeholder="Select staff member" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {STAFF_NAMES.map((name) => (
+                                        <SelectItem key={name} value={name}>
+                                          <div className="flex items-center gap-2">
+                                            <UserCircle className="h-4 w-4" />
+                                            {name}
+                                          </div>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <Textarea
+                                  value={editText}
+                                  onChange={(e) => setEditText(e.target.value)}
+                                  className="min-h-[80px]"
+                                />
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => saveEditComment(comment.id)}
+                                    disabled={!editText.trim() || !selectedName}
+                                  >
+                                    <Check className="h-4 w-4 mr-1" />
+                                    Save
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={cancelEdit}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <p className="text-slate-900 dark:text-white">{comment.text}</p>
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-2 text-sm text-slate-500">
+                                    <UserCircle className="h-4 w-4" />
+                                    <span>Created by: {comment.createdBy || 'Unknown'}</span>
+                                    <span>•</span>
+                                    <span>{comment.timestamp.toLocaleString()}</span>
+                                  </div>
+                                  {comment.lastEditedBy && (
+                                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                                      <Edit2 className="h-3 w-3" />
+                                      <span>Last edited by: {comment.lastEditedBy}</span>
+                                      <span>•</span>
+                                      <span>{comment.lastEditedAt?.toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </>
+                            )}
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeComment(comment.id)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                          {editingComment !== comment.id && (
+                            <div className="flex gap-2 ml-4">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => startEditingComment(comment)}
+                                className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeComment(comment.id)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -485,16 +993,37 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
               <TabsContent value="notes" className="space-y-6">
                 <Card className="shadow-lg">
                   <CardHeader>
-                    <CardTitle>Add New Note</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Add New Note
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="staff-select-notes">Created by</Label>
+                      <Select value={selectedName} onValueChange={setSelectedName}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select staff member" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STAFF_NAMES.map((name) => (
+                            <SelectItem key={name} value={name}>
+                              <div className="flex items-center gap-2">
+                                <UserCircle className="h-4 w-4" />
+                                {name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <Textarea
                       placeholder="Add an internal note..."
                       value={newNote}
                       onChange={(e) => setNewNote(e.target.value)}
                       className="min-h-[100px]"
                     />
-                    <Button onClick={addNote} disabled={!newNote.trim()}>
+                    <Button onClick={addNote} disabled={!newNote.trim() || !selectedName}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add Note
                     </Button>
@@ -507,19 +1036,91 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 space-y-2">
-                            <p className="text-slate-900 dark:text-white">{note.text}</p>
-                            <p className="text-sm text-slate-500">
-                              {note.timestamp.toLocaleString()}
-                            </p>
+                            {editingNote === note.id ? (
+                              <div className="space-y-3">
+                                <div>
+                                  <Label htmlFor="edit-note-name">Edited by</Label>
+                                  <Select value={selectedName} onValueChange={setSelectedName}>
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue placeholder="Select staff member" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {STAFF_NAMES.map((name) => (
+                                        <SelectItem key={name} value={name}>
+                                          <div className="flex items-center gap-2">
+                                            <UserCircle className="h-4 w-4" />
+                                            {name}
+                                          </div>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <Textarea
+                                  value={editText}
+                                  onChange={(e) => setEditText(e.target.value)}
+                                  className="min-h-[80px]"
+                                />
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => saveEditNote(note.id)}
+                                    disabled={!editText.trim() || !selectedName}
+                                  >
+                                    <Check className="h-4 w-4 mr-1" />
+                                    Save
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={cancelEdit}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <p className="text-slate-900 dark:text-white">{note.text}</p>
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-2 text-sm text-slate-500">
+                                    <UserCircle className="h-4 w-4" />
+                                    <span>Created by: {note.createdBy || 'Unknown'}</span>
+                                    <span>•</span>
+                                    <span>{note.timestamp.toLocaleString()}</span>
+                                  </div>
+                                  {note.lastEditedBy && (
+                                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                                      <Edit2 className="h-3 w-3" />
+                                      <span>Last edited by: {note.lastEditedBy}</span>
+                                      <span>•</span>
+                                      <span>{note.lastEditedAt?.toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </>
+                            )}
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeNote(note.id)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                          {editingNote !== note.id && (
+                            <div className="flex gap-2 ml-4">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => startEditingNote(note)}
+                                className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeNote(note.id)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -536,9 +1137,30 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
               <TabsContent value="tags" className="space-y-6">
                 <Card className="shadow-lg">
                   <CardHeader>
-                    <CardTitle>Add New Tag</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <Tag className="h-5 w-5" />
+                      Add New Tag
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="tag-staff-select">Created by</Label>
+                      <Select value={selectedName} onValueChange={setSelectedName}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select staff member" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STAFF_NAMES.map((name) => (
+                            <SelectItem key={name} value={name}>
+                              <div className="flex items-center gap-2">
+                                <UserCircle className="h-4 w-4" />
+                                {name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="flex gap-2">
                       <Input
                         placeholder="Enter a new tag..."
@@ -547,7 +1169,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                         onKeyPress={(e) => e.key === 'Enter' && addTag()}
                         className="flex-1"
                       />
-                      <Button onClick={addTag} disabled={!newTag.trim()}>
+                      <Button onClick={addTag} disabled={!newTag.trim() || !selectedName}>
                         <Plus className="h-4 w-4 mr-2" />
                         Add Tag
                       </Button>
@@ -561,22 +1183,31 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                   </CardHeader>
                   <CardContent>
                     {tags.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {tags.map((tag, index) => (
-                          <Badge 
-                            key={index} 
-                            variant="secondary" 
-                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 text-blue-800 border border-blue-200 hover:from-blue-100 hover:to-purple-100 transition-all duration-200"
-                          >
-                            <Star className="h-3 w-3" />
-                            {tag}
+                      <div className="space-y-3">
+                        {tags.map((tagEntry, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <Badge 
+                                variant="secondary" 
+                                className="px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 border-blue-300"
+                              >
+                                <Star className="h-3 w-3 mr-1" />
+                                {tagEntry.tag}
+                              </Badge>
+                              <div className="flex items-center gap-2 text-xs text-slate-500">
+                                <UserCircle className="h-3 w-3" />
+                                <span>Added by: {tagEntry.createdBy}</span>
+                                <span>•</span>
+                                <span>{tagEntry.timestamp.toLocaleString()}</span>
+                              </div>
+                            </div>
                             <button
-                              onClick={() => removeTag(tag)}
-                              className="ml-2 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
+                              onClick={() => removeTag(tagEntry)}
+                              className="ml-2 hover:bg-destructive/20 rounded-full p-1 transition-colors text-red-500 hover:text-red-700"
                             >
-                              <X className="h-3 w-3" />
+                              <X className="h-4 w-4" />
                             </button>
-                          </Badge>
+                          </div>
                         ))}
                       </div>
                     ) : (

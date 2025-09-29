@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -190,6 +190,9 @@ export const FollowUpModal = ({
             <MessageSquare className="h-5 w-5" />
             Follow-up Management: {memberName}
           </DialogTitle>
+          <DialogDescription className="text-slate-600">
+            Schedule follow-ups and track member communication history.
+          </DialogDescription>
         </DialogHeader>
 
         {/* Tab Navigation */}
