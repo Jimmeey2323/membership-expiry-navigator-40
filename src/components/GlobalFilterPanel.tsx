@@ -135,108 +135,194 @@ export const GlobalFilterPanel = ({ data, className }: GlobalFilterPanelProps) =
                 </div>
               </div>
 
-              {/* Filter Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Enhanced Filter Grid with better organization */}
+              <div className="space-y-8">
                 
-                {/* Status Filter */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <Users className="h-4 w-4 text-emerald-600" />
+                {/* Quick Status Filters - More prominent display */}
+                <div className="space-y-4">
+                  <Label className="text-lg font-bold text-slate-800 flex items-center gap-3">
+                    <div className="p-2 bg-emerald-100 rounded-lg">
+                      <Users className="h-5 w-5 text-emerald-700" />
+                    </div>
                     Member Status
                   </Label>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {uniqueStatuses.map(status => (
-                      <div key={status} className="flex items-center space-x-2 p-2 bg-white/50 rounded-lg hover:bg-white/80 transition-colors">
-                        <Checkbox
-                          id={`status-${status}`}
-                          checked={(filters.status || []).includes(status)}
-                          onCheckedChange={() => handleArrayFilter('status', status)}
-                          className="data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
-                        />
-                        <Label htmlFor={`status-${status}`} className="text-sm flex items-center justify-between w-full cursor-pointer">
-                          <span className="font-medium">{status}</span>
-                          <Badge variant="outline" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
-                            {data.filter(m => m?.status === status).length}
-                          </Badge>
-                        </Label>
-                      </div>
-                    ))}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                    {uniqueStatuses.map(status => {
+                      const count = data.filter(m => m?.status === status).length;
+                      const isSelected = (filters.status || []).includes(status);
+                      const statusConfig = {
+                        'Active': { bg: 'bg-emerald-500', border: 'border-emerald-500', text: 'text-white', hoverBg: 'hover:bg-emerald-600' },
+                        'Frozen': { bg: 'bg-blue-500', border: 'border-blue-500', text: 'text-white', hoverBg: 'hover:bg-blue-600' },
+                        'Trial': { bg: 'bg-purple-500', border: 'border-purple-500', text: 'text-white', hoverBg: 'hover:bg-purple-600' },
+                        'Pending': { bg: 'bg-orange-500', border: 'border-orange-500', text: 'text-white', hoverBg: 'hover:bg-orange-600' },
+                        'Suspended': { bg: 'bg-gray-500', border: 'border-gray-500', text: 'text-white', hoverBg: 'hover:bg-gray-600' },
+                        'Churned': { bg: 'bg-red-500', border: 'border-red-500', text: 'text-white', hoverBg: 'hover:bg-red-600' }
+                      };
+                      const config = statusConfig[status] || statusConfig['Churned'];
+                      
+                      return (
+                        <button
+                          key={status}
+                          onClick={() => handleArrayFilter('status', status)}
+                          className={`
+                            relative p-4 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-xl
+                            ${isSelected 
+                              ? `${config.bg} ${config.border} ${config.text} shadow-lg` 
+                              : `bg-white border-gray-200 text-gray-700 hover:border-gray-300 shadow-md`
+                            }
+                            ${isSelected ? '' : config.hoverBg}
+                          `}
+                        >
+                          <div className="text-center space-y-2">
+                            <div className={`text-lg font-bold ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+                              {count}
+                            </div>
+                            <div className={`text-sm font-medium ${isSelected ? 'text-white' : 'text-gray-700'}`}>
+                              {status}
+                            </div>
+                          </div>
+                          {isSelected && (
+                            <div className="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-lg">
+                              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* Location Filter */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-blue-600" />
-                    Location
-                  </Label>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {uniqueLocations.map(location => (
-                      <div key={location} className="flex items-center space-x-2 p-2 bg-white/50 rounded-lg hover:bg-white/80 transition-colors">
-                        <Checkbox
-                          id={`location-${location}`}
-                          checked={(filters.location || []).includes(location)}
-                          onCheckedChange={() => handleArrayFilter('location', location)}
-                          className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                        />
-                        <Label htmlFor={`location-${location}`} className="text-sm flex items-center justify-between w-full cursor-pointer">
-                          <span className="font-medium">{location}</span>
-                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                            {data.filter(m => m?.location === location).length}
-                          </Badge>
-                        </Label>
+                {/* Secondary Filters Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  
+                  {/* Location Filter - Improved */}
+                  <div className="space-y-4">
+                    <Label className="text-lg font-bold text-slate-800 flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <MapPin className="h-5 w-5 text-blue-700" />
                       </div>
-                    ))}
+                      Locations
+                    </Label>
+                    <Card className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+                      <div className="space-y-3 max-h-48 overflow-y-auto">
+                        {uniqueLocations.map(location => {
+                          const count = data.filter(m => m?.location === location).length;
+                          const isSelected = (filters.location || []).includes(location);
+                          
+                          return (
+                            <div key={location} className={`
+                              flex items-center justify-between p-3 rounded-lg border-2 transition-all duration-200 cursor-pointer
+                              ${isSelected 
+                                ? 'bg-blue-500 border-blue-500 text-white shadow-md' 
+                                : 'bg-white border-blue-200 hover:border-blue-300 hover:bg-blue-50'
+                              }
+                            `} onClick={() => handleArrayFilter('location', location)}>
+                              <div className="flex items-center space-x-3">
+                                <Checkbox
+                                  checked={isSelected}
+                                  className="data-[state=checked]:bg-white data-[state=checked]:border-white data-[state=checked]:text-blue-500"
+                                />
+                                <span className="font-medium text-sm">{location}</span>
+                              </div>
+                              <Badge 
+                                variant={isSelected ? "outline" : "secondary"} 
+                                className={`text-xs font-bold ${
+                                  isSelected 
+                                    ? 'bg-white text-blue-500 border-white' 
+                                    : 'bg-blue-100 text-blue-700 border-blue-200'
+                                }`}
+                              >
+                                {count}
+                              </Badge>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </Card>
                   </div>
-                </div>
 
-                {/* Membership Type Filter */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 text-purple-600" />
-                    Membership Type
-                  </Label>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {uniqueMembershipTypes.map(type => (
-                      <div key={type} className="flex items-center space-x-2 p-2 bg-white/50 rounded-lg hover:bg-white/80 transition-colors">
-                        <Checkbox
-                          id={`membership-${type}`}
-                          checked={(filters.membershipType || []).includes(type)}
-                          onCheckedChange={() => handleArrayFilter('membershipType', type)}
-                          className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                        />
-                        <Label htmlFor={`membership-${type}`} className="text-sm flex items-center justify-between w-full cursor-pointer">
-                          <span className="font-medium truncate">{type}</span>
-                          <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                            {data.filter(m => m?.membershipName === type).length}
-                          </Badge>
-                        </Label>
+                  {/* Membership Type Filter - Improved */}
+                  <div className="space-y-4">
+                    <Label className="text-lg font-bold text-slate-800 flex items-center gap-3">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <CreditCard className="h-5 w-5 text-purple-700" />
                       </div>
-                    ))}
+                      Membership Types
+                    </Label>
+                    <Card className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+                      <div className="space-y-3 max-h-48 overflow-y-auto">
+                        {uniqueMembershipTypes.map(type => {
+                          const count = data.filter(m => m?.membershipName === type).length;
+                          const isSelected = (filters.membershipType || []).includes(type);
+                          
+                          return (
+                            <div key={type} className={`
+                              flex items-center justify-between p-3 rounded-lg border-2 transition-all duration-200 cursor-pointer
+                              ${isSelected 
+                                ? 'bg-purple-500 border-purple-500 text-white shadow-md' 
+                                : 'bg-white border-purple-200 hover:border-purple-300 hover:bg-purple-50'
+                              }
+                            `} onClick={() => handleArrayFilter('membershipType', type)}>
+                              <div className="flex items-center space-x-3">
+                                <Checkbox
+                                  checked={isSelected}
+                                  className="data-[state=checked]:bg-white data-[state=checked]:border-white data-[state=checked]:text-purple-500"
+                                />
+                                <span className="font-medium text-sm truncate max-w-[200px]">{type}</span>
+                              </div>
+                              <Badge 
+                                variant={isSelected ? "outline" : "secondary"} 
+                                className={`text-xs font-bold ${
+                                  isSelected 
+                                    ? 'bg-white text-purple-500 border-white' 
+                                    : 'bg-purple-100 text-purple-700 border-purple-200'
+                                }`}
+                              >
+                                {count}
+                              </Badge>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </Card>
                   </div>
                 </div>
               </div>
 
-              {/* AI Tags Filter */}
-              <AITagsFilter
-                data={data}
-                selectedTags={filters.aiTags || []}
-                onTagsChange={(tags) => updateFilter('aiTags', tags)}
-                className="border-0 shadow-none bg-transparent"
-              />
+                {/* AI Tags Filter - Enhanced */}
+                <div className="space-y-4">
+                  <Label className="text-lg font-bold text-slate-800 flex items-center gap-3">
+                    <div className="p-2 bg-pink-100 rounded-lg">
+                      <Sparkles className="h-5 w-5 text-pink-700" />
+                    </div>
+                    AI-Generated Insights
+                  </Label>
+                  <Card className="p-6 bg-gradient-to-br from-pink-50 to-rose-50 border-pink-200">
+                    <AITagsFilter
+                      data={data}
+                      selectedTags={filters.aiTags || []}
+                      onTagsChange={(tags) => updateFilter('aiTags', tags)}
+                      className="border-0 shadow-none bg-transparent"
+                    />
+                  </Card>
+                </div>
 
-              {/* Date Range Filter */}
-              <div className="space-y-3">
-                <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-indigo-600" />
-                  Date Range Filter
-                </Label>
-                <DateRangePicker
-                  value={filters.dateRange || { start: '', end: '' }}
-                  onChange={(dateRange) => updateFilter('dateRange', dateRange)}
-                  className="w-full"
-                />
-              </div>
+                {/* Date Range Filter - Enhanced */}
+                <div className="space-y-4">
+                  <Label className="text-lg font-bold text-slate-800 flex items-center gap-3">
+                    <div className="p-2 bg-indigo-100 rounded-lg">
+                      <Calendar className="h-5 w-5 text-indigo-700" />
+                    </div>
+                    Date Filters
+                  </Label>
+                  <Card className="p-6 bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-200">
+                    <DateRangePicker
+                      value={filters.dateRange || { start: '', end: '' }}
+                      onChange={(dateRange) => updateFilter('dateRange', dateRange)}
+                      className="w-full"
+                    />
+                  </Card>
+                </div>
 
               {/* Actions */}
               <div className="flex items-center justify-between pt-4 border-t border-white/20">

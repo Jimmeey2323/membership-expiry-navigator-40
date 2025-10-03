@@ -279,6 +279,17 @@ export const EnhancedDataTable = ({
                       </Button>
                     </TableHead>
                     
+                    <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[150px] border-none">
+                      <Button 
+                        variant="ghost" 
+                        className="h-auto p-0 font-semibold text-white hover:text-white/80 hover:bg-transparent"
+                        onClick={() => handleSort('soldBy')}
+                      >
+                        <User className="h-4 w-4 mr-2" />
+                        Associate {getSortIcon('soldBy')}
+                      </Button>
+                    </TableHead>
+                    
                     <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[180px] border-none">Comments</TableHead>
                     
                     <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[180px] border-none">Notes</TableHead>
@@ -375,17 +386,37 @@ export const EnhancedDataTable = ({
                         
                         <TableCell className="px-4 py-2 h-[35px] text-center">
                           <Badge 
-                            variant={member.status === 'Active' ? "default" : member.status === 'Frozen' ? "secondary" : "destructive"}
+                            variant={
+                              member.status === 'Active' ? "default" : 
+                              member.status === 'Frozen' ? "secondary" : 
+                              member.status === 'Trial' ? "outline" :
+                              member.status === 'Pending' ? "outline" :
+                              member.status === 'Suspended' ? "secondary" :
+                              "destructive"
+                            }
                             className={`font-medium text-xs px-2 py-1 ${
                               member.status === 'Active' 
                                 ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
                                 : member.status === 'Frozen'
                                 ? 'bg-blue-100 text-blue-800 border-blue-300'
+                                : member.status === 'Trial'
+                                ? 'bg-purple-100 text-purple-800 border-purple-300'
+                                : member.status === 'Pending'
+                                ? 'bg-orange-100 text-orange-800 border-orange-300'
+                                : member.status === 'Suspended'
+                                ? 'bg-gray-100 text-gray-800 border-gray-300'
                                 : 'bg-red-100 text-red-800 border-red-300'
                             }`}
                           >
                             {member.status}
                           </Badge>
+                        </TableCell>
+                        
+                        <TableCell className="px-4 py-2 h-[35px]">
+                          <div className="flex items-center gap-2">
+                            <User className="h-3 w-3 text-slate-500" />
+                            <span className="text-slate-700 font-normal text-sm">{member.soldBy || 'Not assigned'}</span>
+                          </div>
                         </TableCell>
                         
                         <TableCell className="px-4 py-2 h-[35px] max-w-[180px]">

@@ -103,7 +103,7 @@ export const EditMemberModal = ({
     'Online'
   ];
 
-  const statusOptions = ['Active', 'Frozen', 'Churned'];
+  const statusOptions = ['Active', 'Frozen', 'Churned', 'Pending', 'Suspended', 'Trial'];
 
   // Initialize form data when member changes
   useEffect(() => {

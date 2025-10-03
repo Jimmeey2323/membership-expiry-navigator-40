@@ -15,7 +15,7 @@ export interface MembershipData {
   membershipId: string;
   frozen: string;
   paid: string;
-  status: 'Active' | 'Churned' | 'Frozen'; // Updated to only 3 statuses
+  status: 'Active' | 'Churned' | 'Frozen' | 'Pending' | 'Suspended' | 'Trial'; // Updated to 6 status options
   // New fields for user annotations
   comments?: string;
   notes?: string;
