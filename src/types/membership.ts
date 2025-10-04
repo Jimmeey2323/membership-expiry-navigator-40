@@ -16,10 +16,14 @@ export interface MembershipData {
   frozen: string;
   paid: string;
   status: 'Active' | 'Churned' | 'Frozen' | 'Pending' | 'Suspended' | 'Trial'; // Updated to 6 status options
-  // New fields for user annotations
-  comments?: string;
-  notes?: string;
-  tags?: string[];
+  // Enhanced annotation fields
+  comments?: StructuredComment[];
+  notes?: StructuredNote[];
+  tags?: StructuredTag[];
+  // Legacy string fields for backward compatibility
+  commentsText?: string;
+  notesText?: string;
+  tagsText?: string[];
   // AI-generated tags
   aiTags?: string[];
   aiAnalysisDate?: string;
@@ -29,6 +33,34 @@ export interface MembershipData {
   aiChurnRisk?: string;
   // Legacy field for backward compatibility
   sessionsLeft?: number;
+  // Force React re-render tracking
+  lastUpdated?: number;
+}
+
+export interface StructuredComment {
+  id: string;
+  text: string;
+  createdAt: string; // ISO timestamp
+  createdBy: string; // Associate name
+  editedAt?: string;
+  editedBy?: string;
+}
+
+export interface StructuredNote {
+  id: string;
+  text: string;
+  createdAt: string; // ISO timestamp
+  createdBy: string; // Associate name
+  editedAt?: string;
+  editedBy?: string;
+}
+
+export interface StructuredTag {
+  id: string;
+  text: string;
+  createdAt: string; // ISO timestamp
+  createdBy: string; // Associate name
+  color?: string;
 }
 
 export interface Comment {
@@ -87,4 +119,22 @@ export interface FilterState {
   expiryDateTo: string;
   sessionsFrom: string;
   sessionsTo: string;
+}
+
+export type ViewMode = 'table' | 'kanban' | 'timeline' | 'pivot' | 'list' | 'grid' | 'calendar';
+
+export interface ViewConfig {
+  mode: ViewMode;
+  groupBy?: string;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+  columns?: string[];
+  filters?: FilterState;
+}
+
+export interface LapsingMember extends MembershipData {
+  daysUntilExpiry: number;
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  lastContact?: string;
+  followUpRequired?: boolean;
 }

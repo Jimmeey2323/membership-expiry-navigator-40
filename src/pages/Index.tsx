@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnhancedDataTable } from "@/components/EnhancedDataTable";
 import { GroupableDataTable } from "@/components/GroupableDataTable";
+import { LapsingMembers } from "@/components/LapsingMembers";
 import { MetricsDashboard } from "@/components/MetricsDashboard";
 import { PremiumCharts } from "@/components/PremiumCharts";
 import { AIAnalytics } from "@/components/AIAnalytics";
@@ -35,7 +36,8 @@ import {
   BarChart3,
   FileText,
   MessageSquare,
-  Edit
+  Edit,
+  Clock
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,6 +45,7 @@ const DashboardContent = () => {
   const { getFilteredData } = useFilters();
   const [localMembershipData, setLocalMembershipData] = useState<MembershipData[]>([]);
   const [followUps, setFollowUps] = useState<FollowUpEntry[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [selectedMember, setSelectedMember] = useState<MembershipData | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
@@ -50,36 +53,55 @@ const DashboardContent = () => {
   const { data: membershipData, refetch, isLoading, error } = useQuery({
     queryKey: ["membershipData"],
     queryFn: async () => {
-      // Fetch fresh data and remap annotations
-      const data = await googleSheetsService.getMembershipData();
-      // Trigger annotation refresh in the background
-      setTimeout(() => {
-        googleSheetsService.fetchAnnotations().catch(console.error);
-      }, 100);
-      return data;
+      try {
+        console.log("Fetching membership data...");
+        // Fetch fresh data and remap annotations
+        const data = await googleSheetsService.getMembershipData();
+        console.log("Membership data fetched successfully:", data?.length || 0, "records");
+        
+        // Trigger annotation refresh in the background
+        setTimeout(() => {
+          googleSheetsService.fetchAnnotations().catch((err) => {
+            console.warn("Annotations fetch failed:", err);
+          });
+        }, 100);
+        return data;
+      } catch (error) {
+        console.error("Error fetching membership data:", error);
+        // Return empty array instead of throwing to prevent crash
+        return [];
+      }
     },
     refetchInterval: 30000,
     refetchOnWindowFocus: true,
     staleTime: 0, // Always consider data stale to force fresh fetching
+    retry: false, // Don't retry on failure to prevent endless loading
   });
 
   useEffect(() => {
-    if (membershipData) {
+    if (membershipData && Array.isArray(membershipData)) {
+      console.log("Processing membership data:", membershipData.length, "records");
+      
       // Check for corrupted records
       const corruptedRecords = (membershipData as MembershipData[]).filter((m: MembershipData) => 
-        !m.membershipName || m.membershipName.trim() === '' || 
-        !m.location || m.location.trim() === ''
+        !m?.membershipName || m.membershipName.trim() === '' || 
+        !m?.location || m.location.trim() === ''
       );
       
       if (corruptedRecords.length > 0) {
+        console.warn("Corrupted records found:", corruptedRecords.length);
         toast.error(`Warning: ${corruptedRecords.length} records have missing membership or location data`);
       }
       
       setLocalMembershipData(membershipData as MembershipData[]);
+    } else {
+      console.log("No valid membership data available");
+      setLocalMembershipData([]);
     }
   }, [membershipData]);
 
   if (error) {
+    console.error("Query error:", error);
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6 flex items-center justify-center">
         <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl max-w-md">
@@ -88,6 +110,7 @@ const DashboardContent = () => {
           </CardHeader>
           <CardContent>
             <p className="text-slate-600 mb-4">Unable to fetch membership data. Please check your connection and try again.</p>
+            <p className="text-xs text-slate-400 mb-4">Error: {error?.message || 'Unknown error'}</p>
             <Button onClick={() => refetch()} className="w-full">
               <RefreshCw className="h-4 w-4 mr-2" />
               Retry
@@ -98,11 +121,59 @@ const DashboardContent = () => {
     );
   }
 
-    const handleAnnotationUpdate = (memberId: string, comments: string, notes: string, tags: string[]) => {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6 flex items-center justify-center">
+        <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl max-w-md">
+          <CardHeader>
+            <CardTitle className="text-blue-600">🔄 Lapsed & Renewals Tracker</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center">
+            <RefreshCw className="h-8 w-8 mx-auto animate-spin text-blue-500 mb-4" />
+            <p className="text-slate-600">Loading membership data...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+    const handleAnnotationUpdate = (memberId: string, comments: string, notes: string, tags: string[], associate?: string) => {
       // Save annotations to both Member_Annotations and Expirations sheets
       const member = localMembershipData.find(member => member.memberId === memberId);
       if (member) {
-        // Save to Member_Annotations sheet
+        // Use provided associate or fallback to soldBy or default
+        const associateName = associate || member.soldBy || 'System';
+        
+        // Update local state immediately for instant UI feedback
+        const updatedMember = {
+          ...member,
+          commentsText: comments, // Use commentsText for legacy compatibility
+          notesText: notes,
+          tagsText: tags
+        };
+        
+        setLocalMembershipData(prev => {
+          const updated = prev.map(m => {
+            if (m.memberId === memberId) {
+              // Create a completely new object to ensure React detects the change
+              return {
+                ...m,
+                commentsText: comments,
+                notesText: notes,
+                tagsText: [...tags], // Ensure arrays are also new references
+                // Add a timestamp to force React to detect changes
+                lastUpdated: Date.now()
+              };
+            }
+            return m;
+          });
+          return updated;
+        });
+        
+        // Force a re-render by updating the refresh key
+        setRefreshKey(prev => prev + 1);
+        
+        // Save to Member_Annotations sheet with clean format
         const saveAnnotationPromise = googleSheetsService.saveAnnotation(
           member.memberId,
           member.email,
@@ -110,28 +181,30 @@ const DashboardContent = () => {
           notes,
           tags,
           member.uniqueId,
-          member.soldBy || '', // associate name
+          associateName,
           new Date().toISOString()
         );
 
         // Save to Expirations sheet (updateSingleMember)
-        const updateSingleMemberPromise = googleSheetsService.updateSingleMember({
-          ...member,
-          comments,
-          notes
-        });
+        const updateSingleMemberPromise = googleSheetsService.updateSingleMember(updatedMember);
 
         Promise.all([saveAnnotationPromise, updateSingleMemberPromise])
           .then(() => {
-            // Immediately refetch data to show updated annotations
-            return refetch();
-          })
-          .then(() => {
+            // Clear cache and refetch data to show updated annotations
+            googleSheetsService.clearAnnotationsCache();
             toast.success('Notes and comments saved successfully!');
+            // Optionally refetch to ensure sync with server
+            setTimeout(() => {
+              refetch();
+            }, 1000);
           })
           .catch(error => {
             console.error('Failed to save annotations to Google Sheets:', error);
             toast.error('Failed to save annotations to Google Sheets.');
+            // Revert local state on error
+            setLocalMembershipData(prev => 
+              prev.map(m => m.memberId === memberId ? member : m)
+            );
           });
       }
     };
@@ -172,21 +245,26 @@ const DashboardContent = () => {
 
   // Use the global filter context to get filtered data
   const filteredData = getFilteredData(localMembershipData);
-  const totalMembers = localMembershipData.length;
-  const activeMembers = getFilteredData(localMembershipData.filter(member => member.status === 'Active'));
-  const churnedMembers = getFilteredData(localMembershipData.filter(member => member.status === 'Churned'));
-  const expiringMembers = getFilteredData(localMembershipData.filter(member => {
+  const totalMembers = filteredData.length; // Show filtered count, not full dataset
+  
+  // Calculate category breakdowns from already filtered data
+  const activeMembers = filteredData.filter(member => member.status === 'Active');
+  const churnedMembers = filteredData.filter(member => member.status === 'Churned');
+  const expiringMembers = filteredData.filter(member => {
     if (!member.endDate) return false;
     const endDate = new Date(member.endDate);
     const now = new Date();
     const daysUntilExpiry = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     return daysUntilExpiry <= 30 && daysUntilExpiry > 0 && member.status === 'Active';
-  }));
-  const withAnnotations = getFilteredData(localMembershipData.filter(member => 
-    (member.comments && member.comments.trim()) || 
-    (member.notes && member.notes.trim()) || 
+  });
+  const withAnnotations = filteredData.filter(member => 
+    (member.commentsText && member.commentsText.trim()) || 
+    (member.notesText && member.notesText.trim()) || 
+    (member.tagsText && member.tagsText.length > 0) ||
+    (member.comments && member.comments.length > 0) || 
+    (member.notes && member.notes.length > 0) || 
     (member.tags && member.tags.length > 0)
-  ));
+  );
 
   const quickActions = [
     { 
@@ -250,19 +328,22 @@ const DashboardContent = () => {
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg blur-sm opacity-25 animate-pulse"></div>
                 <div className="relative p-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg shadow-lg">
-                  <Activity className="h-6 w-6" />
+                  <div className="relative">
+                    <Users className="h-6 w-6 animate-pulse" />
+                    <div className="absolute inset-0 bg-white/20 rounded blur-sm animate-pulse"></div>
+                  </div>
                 </div>
               </div>
               <div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-900 bg-clip-text text-transparent tracking-tight">
-                  Membership Dashboard
+                  Lapsed & Renewals Tracker
                 </h1>
-                <p className="text-slate-600 font-medium text-sm mt-0.5">Advanced analytics & member management</p>
+                <p className="text-slate-600 font-medium text-sm mt-0.5">Advanced member lifecycle management</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <AIAnalysisModal
-                data={localMembershipData}
+                data={filteredData}
                 onUpdateMember={handleUpdateMember}
               />
               <Button 
@@ -312,13 +393,20 @@ const DashboardContent = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/10 to-purple-900/10 rounded-xl blur-lg opacity-50"></div>
-              <TabsList className="relative grid w-full sm:w-auto grid-cols-3 backdrop-blur-xl bg-white/90 border-white/20 shadow-lg">
+              <TabsList className="relative grid w-full sm:w-auto grid-cols-4 backdrop-blur-xl bg-white/90 border-white/20 shadow-lg">
                 <TabsTrigger 
                   value="members" 
                   className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-purple-600 data-[state=active]:text-white transition-all duration-300"
                 >
                   <Users className="h-4 w-4" />
-                  Members
+                  Data Table
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="priority" 
+                  className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-600 data-[state=active]:to-red-700 data-[state=active]:text-white transition-all duration-300"
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  Priority View
                 </TabsTrigger>
                 <TabsTrigger 
                   value="analytics" 
@@ -350,10 +438,25 @@ const DashboardContent = () => {
           </div>
 
         <TabsContent value="members" className="space-y-6">
-          <GroupableDataTable
+          <EnhancedDataTable
+            key={refreshKey}
             data={filteredData}
-            title="Member Management"
+            title="Member Data Table with Multi-View Options"
             onAnnotationUpdate={handleAnnotationUpdate}
+            onEditMember={(member) => {
+              setSelectedMember(member);
+              setShowEditModal(true);
+            }}
+            onFollowUpMember={(member) => {
+              setSelectedMember(member);
+              setShowFollowUpModal(true);
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="priority" className="space-y-6">
+          <LapsingMembers
+            data={filteredData}
             onEditMember={(member) => {
               setSelectedMember(member);
               setShowEditModal(true);
@@ -367,7 +470,7 @@ const DashboardContent = () => {
 
         <TabsContent value="analytics" className="space-y-6">
           <PremiumCharts data={filteredData} />
-          <AIAnalytics data={localMembershipData} />
+          <AIAnalytics data={filteredData} />
         </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">

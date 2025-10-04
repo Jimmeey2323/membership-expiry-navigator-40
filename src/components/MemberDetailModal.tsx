@@ -21,11 +21,20 @@ import { googleSheetsService } from "@/services/googleSheets";
 import { toast } from "sonner";
 import { cleanText, toSentenceCase } from "@/lib/textUtils";
 
+// Utility function to safely extract text from structured comments/notes
+const extractStructuredText = (legacyText: string | undefined, structuredArray: any[] | undefined): string => {
+  if (legacyText) return legacyText;
+  if (Array.isArray(structuredArray)) {
+    return structuredArray.map(item => item.text || item).join('\n');
+  }
+  return '';
+};
+
 interface MemberDetailModalProps {
   member: MembershipData | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (memberId: string, comments: string, notes: string, tags: string[]) => void;
+  onSave: (memberId: string, comments: string, notes: string, tags: string[], associate?: string) => void;
 }
 
 interface Comment {
@@ -203,14 +212,18 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
   // Update state when member changes
   useEffect(() => {
     if (member) {
-      const parsedComments = parseComments(member.comments || '');
-      const parsedNotes = parseNotes(member.notes || '');
+      // Handle both legacy string format and new structured format
+      const commentsText = extractStructuredText(member.commentsText, member.comments);
+      const notesText = extractStructuredText(member.notesText, member.notes);
       
-      // Convert string tags to TagEntry format for backward compatibility
-      const parsedTags: TagEntry[] = (member.tags || []).map(tag => ({
-        tag,
-        createdBy: 'Unknown', // Legacy tags don't have creator info
-        timestamp: new Date()
+      const parsedComments = parseComments(commentsText);
+      const parsedNotes = parseNotes(notesText);
+      
+      // Parse tags into TagEntry format - handle both string and structured tags
+      const parsedTags: TagEntry[] = (member.tagsText || member.tags || []).map(tag => ({
+        tag: typeof tag === 'string' ? tag : (tag as any)?.text || String(tag),
+        createdBy: typeof tag === 'object' ? (tag as any)?.createdBy || 'Unknown' : 'Unknown',
+        timestamp: typeof tag === 'object' ? new Date((tag as any)?.createdAt || Date.now()) : new Date()
       }));
       
       setComments(parsedComments);
@@ -342,28 +355,19 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     
     setIsSaving(true);
     try {
-      // Enhanced format to include creator and editor information with cleaned text
+      // Clean format without embedded metadata - store associate and timestamp separately
       const allComments = comments.map(c => {
-        let formatted = toSentenceCase(cleanText(c.text));
-        if (c.createdBy) {
-          formatted += `\n[Created by: ${c.createdBy} at ${c.timestamp.toLocaleString()}]`;
-        }
-        if (c.lastEditedBy && c.lastEditedAt) {
-          formatted += `\n[Last edited by: ${c.lastEditedBy} at ${c.lastEditedAt.toLocaleString()}]`;
-        }
-        return formatted;
+        return toSentenceCase(cleanText(c.text));
       }).join('\n---\n');
       
       const allNotes = notes.map(n => {
-        let formatted = toSentenceCase(cleanText(n.text));
-        if (n.createdBy) {
-          formatted += `\n[Created by: ${n.createdBy} at ${n.timestamp.toLocaleString()}]`;
-        }
-        if (n.lastEditedBy && n.lastEditedAt) {
-          formatted += `\n[Last edited by: ${n.lastEditedBy} at ${n.lastEditedAt.toLocaleString()}]`;
-        }
-        return formatted;
+        return toSentenceCase(cleanText(n.text));
       }).join('\n---\n');
+      
+      // Get the most recent associate for the annotation
+      const latestAssociate = comments.length > 0 ? comments[comments.length - 1].createdBy : 
+                              notes.length > 0 ? notes[notes.length - 1].createdBy : 
+                              'System';
 
       // Convert TagEntry back to string array for saving
       const tagsForSaving = tags.map(tagEntry => tagEntry.tag);
@@ -377,7 +381,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
         member.uniqueId // Add unique ID for better persistence
       );
       
-      onSave(member.memberId, allComments, allNotes, tagsForSaving);
+      onSave(member.memberId, allComments, allNotes, tagsForSaving, latestAssociate);
       toast.success("Member details saved successfully!");
       onClose();
     } catch (error) {
@@ -715,7 +719,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                           <div>
                             <Label className="text-sm font-semibold text-slate-600">Notes:</Label>
                             <div className="p-3 bg-gray-50 rounded border mt-2">
-                              <pre className="text-sm whitespace-pre-wrap">{member.notes}</pre>
+                              <pre className="text-sm whitespace-pre-wrap">{extractStructuredText(member.notesText, member.notes)}</pre>
                             </div>
                           </div>
                         )}
@@ -723,7 +727,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                           <div>
                             <Label className="text-sm font-semibold text-slate-600">Comments:</Label>
                             <div className="p-3 bg-gray-50 rounded border mt-2">
-                              <pre className="text-sm whitespace-pre-wrap">{member.comments}</pre>
+                              <pre className="text-sm whitespace-pre-wrap">{extractStructuredText(member.commentsText, member.comments)}</pre>
                             </div>
                           </div>
                         )}
@@ -732,7 +736,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                             <Label className="text-sm font-semibold text-slate-600">Tags:</Label>
                             <div className="flex flex-wrap gap-2 mt-2">
                               {member.tags.map((tag, index) => (
-                                <Badge key={index} variant="outline">{tag}</Badge>
+                                <Badge key={index} variant="outline">{typeof tag === 'string' ? tag : (tag as any)?.text || String(tag)}</Badge>
                               ))}
                             </div>
                           </div>
@@ -773,7 +777,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                                   aiChurnRisk: undefined,
                                   aiAnalysisDate: undefined
                                 };
-                                onSave(member.memberId, member.comments || '', member.notes || '', member.tags || []);
+                                onSave(member.memberId, extractStructuredText(member.commentsText, member.comments), extractStructuredText(member.notesText, member.notes), (member.tagsText || member.tags || []).map(t => typeof t === 'string' ? t : (t as any)?.text || String(t)), 'System');
                                 toast.success('AI tags cleared successfully');
                                 onClose();
                               } catch (error) {

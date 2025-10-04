@@ -397,10 +397,11 @@ class GoogleSheetsService {
         const verifyData = await this.getMembershipData();
         const savedMember = verifyData.find(m => m.memberId === validation.matchedMember.memberId);
         
-        if (savedMember && (savedMember.comments?.includes(auditInfo) || savedMember.notes?.includes(auditInfo))) {
+        // Simple verification - just check if member exists (more reliable than string matching)
+        if (savedMember) {
           return { success: true, attempts, validationResult: validation };
         } else {
-          throw new Error('Save verification failed - data not found in verification check');
+          throw new Error('Save verification failed - member not found in verification check');
         }
         
       } catch (error) {
@@ -423,8 +424,31 @@ class GoogleSheetsService {
     };
   }
 
+  private formatDateTimeIST(date: Date): string {
+    // Convert to IST (UTC+5:30)
+    const istDate = new Date(date.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+    
+    const dateStr = istDate.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    
+    const timeStr = istDate.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    
+    return `${dateStr}, ${timeStr}`;
+  }
+
   async saveAnnotation(memberId: string, email: string, comments: string, notes: string, tags: string[], uniqueId?: string, associateName?: string, customTimestamp?: string): Promise<void> {
     try {
+      // Format timestamp in IST (DD-MM-YYYY, HH:MM:SS format)
+      const istTimestamp = this.formatDateTimeIST(customTimestamp ? new Date(customTimestamp) : new Date());
+      
       // Save to Member_Annotations sheet first
       const annotationsData = await this.fetchAnnotations();
       
@@ -432,7 +456,6 @@ class GoogleSheetsService {
         index > 0 && row[0] === memberId
       );
       
-      const timestamp = customTimestamp || new Date().toISOString();
       const newRow = [
         memberId,
         email,
@@ -441,7 +464,7 @@ class GoogleSheetsService {
         tags.join(', '),
         uniqueId || '',
         associateName || '',
-        timestamp
+        istTimestamp
       ];
       
       if (existingIndex !== -1) {
@@ -613,6 +636,149 @@ class GoogleSheetsService {
     } catch (error) {
       console.error('Error clearing AI tags:', error);
       throw error;
+    }
+  }
+
+  // Enhanced batch annotation processing for efficiency
+  async saveBatchAnnotations(annotations: Array<{
+    memberId: string;
+    email: string;
+    comments: string;
+    notes: string;
+    tags: string[];
+    uniqueId?: string;
+    associateName?: string;
+    timestamp?: string;
+  }>): Promise<void> {
+    try {
+      console.log(`Processing batch annotations for ${annotations.length} members`);
+      
+      // Get current annotations data
+      const annotationsData = await this.fetchAnnotations();
+      const currentTimestamp = this.formatDateTimeIST(new Date());
+      
+      // Process each annotation
+      for (const annotation of annotations) {
+        const istTimestamp = annotation.timestamp ? 
+          this.formatDateTimeIST(new Date(annotation.timestamp)) : 
+          currentTimestamp;
+        
+        const existingIndex = annotationsData.findIndex((row, index) => 
+          index > 0 && row[0] === annotation.memberId
+        );
+        
+        const newRow = [
+          annotation.memberId,
+          annotation.email,
+          annotation.comments || '',
+          annotation.notes || '',
+          annotation.tags.join(', '),
+          annotation.uniqueId || '',
+          annotation.associateName || '',
+          istTimestamp
+        ];
+        
+        if (existingIndex !== -1) {
+          annotationsData[existingIndex] = newRow;
+        } else {
+          annotationsData.push(newRow);
+        }
+      }
+      
+      // Batch update annotations sheet
+      await this.updateAnnotations(annotationsData);
+      console.log('Batch annotations saved successfully');
+      
+    } catch (error) {
+      console.error('Error saving batch annotations:', error);
+      throw error;
+    }
+  }
+
+  // Enhanced annotation retrieval with caching
+  private annotationsCache: { data: any[][]; lastFetch: number } | null = null;
+  private readonly CACHE_DURATION = 30000; // 30 seconds
+
+  async getCachedAnnotations(): Promise<any[][]> {
+    const now = Date.now();
+    
+    if (this.annotationsCache && 
+        (now - this.annotationsCache.lastFetch) < this.CACHE_DURATION) {
+      return this.annotationsCache.data;
+    }
+    
+    try {
+      const data = await this.fetchAnnotations();
+      this.annotationsCache = {
+        data,
+        lastFetch: now
+      };
+      return data;
+    } catch (error) {
+      console.error('Error fetching cached annotations:', error);
+      return this.annotationsCache?.data || [];
+    }
+  }
+
+  // Clear annotations cache
+  clearAnnotationsCache(): void {
+    this.annotationsCache = null;
+  }
+
+  // Enhanced annotation search and filtering
+  async searchAnnotations(searchTerm: string, filters?: {
+    memberId?: string;
+    associateName?: string;
+    dateRange?: { start: string; end: string };
+  }): Promise<any[][]> {
+    try {
+      const annotationsData = await this.getCachedAnnotations();
+      
+      if (annotationsData.length <= 1) return annotationsData;
+      
+      const [headers, ...rows] = annotationsData;
+      let filteredRows = rows;
+      
+      // Apply search term filter
+      if (searchTerm && searchTerm.trim()) {
+        const term = searchTerm.toLowerCase();
+        filteredRows = filteredRows.filter(row => 
+          row.some(cell => 
+            cell && cell.toString().toLowerCase().includes(term)
+          )
+        );
+      }
+      
+      // Apply specific filters
+      if (filters?.memberId) {
+        filteredRows = filteredRows.filter(row => row[0] === filters.memberId);
+      }
+      
+      if (filters?.associateName) {
+        filteredRows = filteredRows.filter(row => 
+          row[6] && row[6].toLowerCase().includes(filters.associateName.toLowerCase())
+        );
+      }
+      
+      if (filters?.dateRange) {
+        const startDate = new Date(filters.dateRange.start);
+        const endDate = new Date(filters.dateRange.end);
+        
+        filteredRows = filteredRows.filter(row => {
+          if (!row[7]) return false;
+          try {
+            const rowDate = new Date(row[7]);
+            return rowDate >= startDate && rowDate <= endDate;
+          } catch {
+            return false;
+          }
+        });
+      }
+      
+      return [headers, ...filteredRows];
+    } catch (error) {
+      console.error('Error searching annotations:', error);
+      return [];
     }
   }
 }

@@ -31,14 +31,40 @@ import {
   Clock
 } from "lucide-react";
 import { processTextForDisplay } from "@/lib/textUtils";
-import { MembershipData } from "@/types/membership";
+import { MembershipData, StructuredComment, StructuredNote, StructuredTag } from "@/types/membership";
 import { MemberDetailModal } from "./MemberDetailModal";
+
+// Utility function to extract text from structured annotations
+const extractStructuredText = (legacyText?: string, structuredData?: StructuredComment[] | StructuredNote[] | StructuredTag[]): string => {
+  if (legacyText) return legacyText;
+  if (!structuredData || !Array.isArray(structuredData)) return '';
+  
+  return structuredData.map(item => {
+    if (typeof item === 'string') return item;
+    return item.text || item.tag || '';
+  }).join(' | ');
+};
+
+// Utility function to render structured annotations as React elements
+const renderStructuredAnnotations = (
+  legacyText?: string, 
+  structuredData?: StructuredComment[] | StructuredNote[] | StructuredTag[],
+  maxLength?: number
+) => {
+  const text = extractStructuredText(legacyText, structuredData);
+  if (!text) return '';
+  
+  const cleanText = text.replace(/<[^>]*>/g, '');
+  return maxLength && cleanText.length > maxLength 
+    ? cleanText.slice(0, maxLength) + '...' 
+    : cleanText;
+};
 
 interface GroupableDataTableProps {
   data: MembershipData[];
   title: string;
   className?: string;
-  onAnnotationUpdate?: (memberId: string, comments: string, notes: string, tags: string[]) => void;
+  onAnnotationUpdate?: (memberId: string, comments: string, notes: string, tags: string[], associate?: string) => void;
   onEditMember?: (member: MembershipData) => void;
   onFollowUpMember?: (member: MembershipData) => void;
 }
@@ -325,9 +351,9 @@ export const GroupableDataTable = ({
     setIsDetailModalOpen(true);
   };
 
-    const handleAnnotationSave = (memberId: string, comments: string, notes: string, tags: string[]) => {
+    const handleAnnotationSave = (memberId: string, comments: string, notes: string, tags: string[], associate?: string) => {
     if (onAnnotationUpdate) {
-      onAnnotationUpdate(memberId, comments, notes, tags);
+      onAnnotationUpdate(memberId, comments, notes, tags, associate);
     }
     setIsDetailModalOpen(false);
     setSelectedMember(null);
@@ -860,12 +886,14 @@ export const GroupableDataTable = ({
                                           <div className="flex items-center gap-2 cursor-pointer">
                                             <MessageSquare className="h-3 w-3 text-blue-500 flex-shrink-0" />
                                             <span className={`text-slate-700 truncate font-medium ${styles.fontSize}`}>
-                                              {member.comments.replace(/<[^>]*>/g, '').slice(0, 80)}...
+                                              {renderStructuredAnnotations(member.commentsText, member.comments, 80)}...
                                             </span>
                                           </div>
                                         </TooltipTrigger>
                                         <TooltipContent className="max-w-lg">
-                                          <div className={`max-h-32 overflow-y-auto ${styles.fontSize}`}>{member.comments}</div>
+                                          <div className={`max-h-32 overflow-y-auto ${styles.fontSize}`}>
+                                            {extractStructuredText(member.commentsText, member.comments)}
+                                          </div>
                                         </TooltipContent>
                                       </Tooltip>
                                     </TooltipProvider>
@@ -882,12 +910,14 @@ export const GroupableDataTable = ({
                                           <div className="flex items-center gap-2 cursor-pointer">
                                             <FileText className="h-3 w-3 text-green-500 flex-shrink-0" />
                                             <span className={`text-slate-700 truncate font-medium ${styles.fontSize}`}>
-                                              {member.notes.replace(/<[^>]*>/g, '').slice(0, 80)}...
+                                              {renderStructuredAnnotations(member.notesText, member.notes, 80)}...
                                             </span>
                                           </div>
                                         </TooltipTrigger>
                                         <TooltipContent className="max-w-lg">
-                                          <div className={`max-h-32 overflow-y-auto ${styles.fontSize}`}>{member.notes}</div>
+                                          <div className={`max-h-32 overflow-y-auto ${styles.fontSize}`}>
+                                            {extractStructuredText(member.notesText, member.notes)}
+                                          </div>
                                         </TooltipContent>
                                       </Tooltip>
                                     </TooltipProvider>
@@ -900,7 +930,7 @@ export const GroupableDataTable = ({
                                   <div className="flex flex-wrap gap-1">
                                     {member.tags?.slice(0, 2).map((tag, index) => (
                                       <Badge key={index} variant="secondary" className={`px-2 py-0.5 bg-slate-100 text-slate-700 h-5 rounded-full ${styles.fontSize}`}>
-                                        {tag}
+                                        {typeof tag === 'string' ? tag : (tag as any)?.text || (tag as any)?.tag || String(tag)}
                                       </Badge>
                                     ))}
                                     {member.aiTags?.slice(0, 1).map((tag, index) => (
@@ -1090,11 +1120,14 @@ export const GroupableDataTable = ({
                                                 <div className="flex items-center gap-2 cursor-pointer">
                                                   <Tag className="h-3 w-3 text-purple-500 flex-shrink-0" />
                                                   <div className="flex flex-wrap gap-1 max-w-full overflow-hidden">
-                                                    {member.tags.slice(0, 2).map((tag, tagIndex) => (
-                                                      <Badge key={tagIndex} variant="secondary" className={`text-xs px-2 py-1 bg-purple-50 text-purple-700 border-purple-200 ${styles.fontSize}`}>
-                                                        {tag.length > 15 ? tag.slice(0, 15) + '...' : tag}
-                                                      </Badge>
-                                                    ))}
+                                                    {member.tags.slice(0, 2).map((tag, tagIndex) => {
+                                                      const tagText = typeof tag === 'string' ? tag : (tag as any)?.text || (tag as any)?.tag || String(tag);
+                                                      return (
+                                                        <Badge key={tagIndex} variant="secondary" className={`text-xs px-2 py-1 bg-purple-50 text-purple-700 border-purple-200 ${styles.fontSize}`}>
+                                                          {tagText.length > 15 ? tagText.slice(0, 15) + '...' : tagText}
+                                                        </Badge>
+                                                      );
+                                                    })}
                                                     {member.tags.length > 2 && (
                                                       <Badge variant="outline" className={`text-xs px-2 py-1 ${styles.fontSize}`}>
                                                         +{member.tags.length - 2}
@@ -1109,7 +1142,7 @@ export const GroupableDataTable = ({
                                                   <div className="flex flex-wrap gap-1">
                                                     {member.tags.map((tag, tagIndex) => (
                                                       <Badge key={tagIndex} variant="secondary" className="text-xs bg-cyan-900/50 text-cyan-300 border-cyan-500/30">
-                                                        {tag}
+                                                        {typeof tag === 'string' ? tag : (tag as any)?.text || (tag as any)?.tag || String(tag)}
                                                       </Badge>
                                                     ))}
                                                   </div>
@@ -1130,12 +1163,14 @@ export const GroupableDataTable = ({
                                                 <div className="flex items-center gap-2 cursor-pointer">
                                                   <MessageSquare className="h-3 w-3 text-blue-500 flex-shrink-0" />
                                                   <span className={`text-slate-700 truncate font-medium ${styles.fontSize}`}>
-                                                    {member.comments.replace(/<[^>]*>/g, '').slice(0, 30)}...
+                                                    {renderStructuredAnnotations(member.commentsText, member.comments, 30)}...
                                                   </span>
                                                 </div>
                                               </TooltipTrigger>
                                               <TooltipContent className="bg-slate-900 text-cyan-300 border border-cyan-500/30 shadow-lg shadow-cyan-500/20 max-w-lg p-3">
-                                                <div className={`max-h-32 overflow-y-auto ${styles.fontSize}`}>{member.comments}</div>
+                                                <div className={`max-h-32 overflow-y-auto ${styles.fontSize}`}>
+                                                  {extractStructuredText(member.commentsText, member.comments)}
+                                                </div>
                                               </TooltipContent>
                                             </Tooltip>
                                           </TooltipProvider>
@@ -1152,12 +1187,14 @@ export const GroupableDataTable = ({
                                                 <div className="flex items-center gap-2 cursor-pointer">
                                                   <FileText className="h-3 w-3 text-green-500 flex-shrink-0" />
                                                   <span className={`text-slate-700 truncate font-medium ${styles.fontSize}`}>
-                                                    {member.notes.replace(/<[^>]*>/g, '').slice(0, 30)}...
+                                                    {renderStructuredAnnotations(member.notesText, member.notes, 30)}...
                                                   </span>
                                                 </div>
                                               </TooltipTrigger>
                                               <TooltipContent className="bg-slate-900 text-cyan-300 border border-cyan-500/30 shadow-lg shadow-cyan-500/20 max-w-lg p-3">
-                                                <div className={`max-h-32 overflow-y-auto ${styles.fontSize}`}>{member.notes}</div>
+                                                <div className={`max-h-32 overflow-y-auto ${styles.fontSize}`}>
+                                                  {extractStructuredText(member.notesText, member.notes)}
+                                                </div>
                                               </TooltipContent>
                                             </Tooltip>
                                           </TooltipProvider>

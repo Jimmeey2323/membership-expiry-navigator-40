@@ -117,12 +117,15 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
             
             {/* Logo and Title */}
             <div className="flex items-center space-x-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl shadow-lg">
-                <Building2 className="h-6 w-6 text-white" />
+              <div className="relative flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl shadow-lg">
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-xl blur-sm opacity-50 animate-pulse"></div>
+                <Users className="relative h-6 w-6 text-white animate-pulse" />
               </div>
               <div>
-                <h1 className="text-lg font-bold bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-900 bg-clip-text text-transparent">MembershipPro</h1>
-                <p className="text-sm text-slate-600 font-medium">Management System</p>
+                <h1 className="text-lg font-bold bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-900 bg-clip-text text-transparent">
+                  Lapsed & Renewals Tracker
+                </h1>
+                <p className="text-sm text-slate-600 font-medium">Advanced Member Management</p>
               </div>
             </div>
             

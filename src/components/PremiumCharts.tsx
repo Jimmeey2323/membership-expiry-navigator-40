@@ -28,11 +28,11 @@ const PREMIUM_COLORS = {
 };
 
 export const PremiumCharts = ({ data }: PremiumChartsProps) => {
-  const { getFilteredData, hasActiveFilters, getActiveFilterCount } = useFilters();
+  const { hasActiveFilters, getActiveFilterCount } = useFilters();
   const [activeChart, setActiveChart] = useState<'overview' | 'revenue' | 'engagement' | 'trends'>('overview');
 
-  // Use filtered data from global context
-  const filteredData = getFilteredData(data);
+  // Use the data directly since it's already filtered by the parent component
+  const filteredData = data;
 
   // Data processing using filtered data
   const statusData = filteredData.reduce((acc, member) => {
