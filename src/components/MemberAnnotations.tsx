@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { AssociateSelector } from "@/components/ui/associate-selector";
-import { X, Plus, Save } from "lucide-react";
+import { X, Plus, Save, Shield, RefreshCw } from "lucide-react";
 import { MembershipData } from "@/types/membership";
 import { googleSheetsService } from "@/services/googleSheets";
 import { toast } from "sonner";
@@ -26,6 +26,9 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
   const [newTag, setNewTag] = useState('');
   const [associateName, setAssociateName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [validationResult, setValidationResult] = useState<any>(null);
+  const [showValidation, setShowValidation] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
 
   // Reset form when member changes or dialog opens
   useEffect(() => {
@@ -35,6 +38,8 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
       setTags(member.tags || []);
       setAssociateName('');
       setNewTag('');
+      setValidationResult(null);
+      setShowValidation(false);
     }
   }, [member, isOpen]);
 
@@ -59,36 +64,109 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
     
     setIsSaving(true);
     try {
-      const timestamp = new Date().toISOString();
-      
-      // Append associate name and date to comments/notes if they exist
-      const annotatedComments = comments ? 
-        `${comments}\n\n[Updated by ${associateName} on ${new Date().toLocaleDateString()}]` : 
-        comments;
-      
-      const annotatedNotes = notes ? 
-        `${notes}\n\n[Updated by ${associateName} on ${new Date().toLocaleDateString()}]` : 
-        notes;
-
-      await googleSheetsService.saveAnnotation(
+      // Use enhanced save method with validation and retry logic
+      const result = await googleSheetsService.saveAnnotationWithRetry(
         member.memberId,
         member.email,
-        annotatedComments,
-        annotatedNotes,
+        comments,
+        notes,
         tags,
-        member.uniqueId, // Pass unique ID for better tracking
+        member.uniqueId,
         associateName,
-        timestamp
+        3 // max retries
       );
       
-      onSave(member.memberId, annotatedComments, annotatedNotes, tags);
-      toast.success("Annotations saved successfully!");
-      onClose();
+      if (result.success) {
+        // Success with detailed feedback
+        toast.success(
+          `Annotations saved successfully! (${result.attempts} attempt${result.attempts > 1 ? 's' : ''})`
+        );
+        
+        // Show validation confidence if not 100%
+        if (result.validationResult?.confidence < 100) {
+          toast.info(
+            `Data validation: ${result.validationResult.confidence}% confidence - ${result.validationResult.issues.join(', ')}`
+          );
+        }
+        
+        onSave(member.memberId, comments, notes, tags);
+        onClose();
+      } else {
+        // Detailed error information
+        console.error('Enhanced save failed:', result);
+        toast.error(`Save failed: ${result.error}`);
+        
+        if (result.validationResult?.issues?.length > 0) {
+          toast.warning(
+            `Data issues detected: ${result.validationResult.issues.join(', ')}`
+          );
+        }
+        
+        // Fallback to basic save if validation failed
+        if (!result.validationResult?.isValid) {
+          const shouldFallback = confirm(
+            `Validation failed (${result.validationResult?.confidence || 0}% confidence). Save anyway using basic method?`
+          );
+          
+          if (shouldFallback) {
+            try {
+              const timestamp = new Date().toISOString();
+              const fallbackComments = comments ? 
+                `${comments}\n\n[FALLBACK SAVE by ${associateName} on ${new Date().toLocaleDateString()} - Validation Issues: ${result.validationResult?.issues.join(', ')}]` : 
+                comments;
+              
+              await googleSheetsService.saveAnnotation(
+                member.memberId,
+                member.email,
+                fallbackComments,
+                notes,
+                tags,
+                member.uniqueId,
+                associateName,
+                timestamp
+              );
+              
+              onSave(member.memberId, fallbackComments, notes, tags);
+              toast.warning("Saved using fallback method - please verify data accuracy");
+              onClose();
+            } catch (fallbackError) {
+              toast.error("Both enhanced and fallback saves failed. Please try again.");
+            }
+          }
+        }
+      }
     } catch (error) {
-      console.error('Error saving annotations:', error);
-      toast.error("Failed to save annotations. Please try again.");
+      console.error('Error in enhanced save process:', error);
+      toast.error("Unexpected error occurred. Please try again.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const checkMemberValidation = async () => {
+    if (!member) return;
+    
+    setIsValidating(true);
+    try {
+      const result = await googleSheetsService.validateMemberBeforeSave(
+        member.memberId,
+        member.email,
+        member.uniqueId
+      );
+      
+      setValidationResult(result);
+      setShowValidation(true);
+      
+      if (result.isValid) {
+        toast.success(`Member validation passed! ${result.confidence}% confidence`);
+      } else {
+        toast.warning(`Validation issues found: ${result.issues.join(', ')}`);
+      }
+    } catch (error) {
+      toast.error('Failed to validate member data');
+      console.error('Validation error:', error);
+    } finally {
+      setIsValidating(false);
     }
   };
 
@@ -111,7 +189,7 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
             Add Notes & Tags for {member.firstName} {member.lastName}
           </DialogTitle>
           <DialogDescription className="text-slate-600">
-            Add comments, notes, and tags to track important member information.
+            Enhanced annotation system with data validation, retry logic, and audit trails for maximum reliability.
           </DialogDescription>
         </DialogHeader>
         
@@ -135,6 +213,71 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
                 </Badge>
               </div>
             </div>
+          </div>
+
+          {/* Validation Section */}
+          <div className="bg-slate-50 p-4 rounded-lg border">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-medium text-slate-700">Data Reliability Check</h4>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={checkMemberValidation}
+                disabled={!member || isValidating}
+              >
+                {isValidating ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Validating...
+                  </>
+                ) : (
+                  <>
+                    <Shield className="h-4 w-4 mr-2" />
+                    Validate Member Data
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            {showValidation && validationResult && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant={validationResult.isValid ? "default" : "destructive"}>
+                    {validationResult.confidence}% Confidence
+                  </Badge>
+                  <span className="text-sm text-slate-600">
+                    {validationResult.isValid ? 'Data validation passed' : 'Issues detected'}
+                  </span>
+                </div>
+                
+                {validationResult.issues.length > 0 && (
+                  <div className="text-sm text-orange-600 bg-orange-50 p-3 rounded border border-orange-200">
+                    <strong>Issues found:</strong>
+                    <ul className="mt-1 space-y-1">
+                      {validationResult.issues.map((issue: string, index: number) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="text-orange-500">•</span>
+                          <span>{issue}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {validationResult.matchedMember && (
+                  <div className="text-sm text-green-600 bg-green-50 p-3 rounded border border-green-200">
+                    <strong>Matched Member:</strong> {validationResult.matchedMember.firstName} {validationResult.matchedMember.lastName} 
+                    <span className="text-green-500"> (ID: {validationResult.matchedMember.memberId})</span>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {!showValidation && (
+              <p className="text-sm text-slate-500">
+                Click "Validate Member Data" to check for accuracy and reliability issues before saving.
+              </p>
+            )}
           </div>
 
           {/* Associate Name */}
@@ -214,7 +357,22 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
               Cancel
             </Button>
             <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save Annotations'}
+              {isSaving ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Saving with Enhanced Reliability...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save with Validation
+                  {validationResult && (
+                    <Badge variant={validationResult.isValid ? "default" : "secondary"} className="ml-2 text-xs">
+                      {validationResult.confidence}%
+                    </Badge>
+                  )}
+                </>
+              )}
             </Button>
           </div>
         </div>

@@ -260,6 +260,169 @@ class GoogleSheetsService {
     }
   }
 
+  // Enhanced member validation method
+  async validateMemberBeforeSave(
+    memberId: string, 
+    email: string, 
+    uniqueId?: string
+  ): Promise<{
+    isValid: boolean;
+    confidence: number;
+    issues: string[];
+    matchedMember?: any;
+  }> {
+    try {
+      const allMembers = await this.getMembershipData();
+      
+      // Try exact match first
+      let matchedMember = allMembers.find(m => 
+        m.memberId === memberId && 
+        m.email === email && 
+        m.uniqueId === uniqueId
+      );
+      
+      if (matchedMember) {
+        return { isValid: true, confidence: 100, issues: [], matchedMember };
+      }
+      
+      // Try partial matches
+      const partialMatches = allMembers.filter(m => 
+        m.memberId === memberId || 
+        m.email === email || 
+        (uniqueId && m.uniqueId === uniqueId)
+      );
+      
+      if (partialMatches.length === 1) {
+        const issues = [];
+        let confidence = 90;
+        
+        if (partialMatches[0].memberId !== memberId) {
+          issues.push("Member ID mismatch");
+          confidence -= 20;
+        }
+        if (partialMatches[0].email !== email) {
+          issues.push("Email mismatch");
+          confidence -= 15;
+        }
+        if (uniqueId && partialMatches[0].uniqueId !== uniqueId) {
+          issues.push("Unique ID mismatch");
+          confidence -= 10;
+        }
+        
+        return { 
+          isValid: confidence > 70, 
+          confidence, 
+          issues, 
+          matchedMember: partialMatches[0] 
+        };
+      }
+      
+      return { 
+        isValid: false, 
+        confidence: 0, 
+        issues: [`No matching member found for ID: ${memberId}`], 
+        matchedMember: undefined 
+      };
+      
+    } catch (error) {
+      return { 
+        isValid: false, 
+        confidence: 0, 
+        issues: [`Validation error: ${error.message}`] 
+      };
+    }
+  }
+
+  // Enhanced save with retry logic and validation
+  async saveAnnotationWithRetry(
+    memberId: string,
+    email: string, 
+    comments: string,
+    notes: string,
+    tags: string[],
+    uniqueId?: string,
+    associateName?: string,
+    maxRetries: number = 3
+  ): Promise<{
+    success: boolean;
+    attempts: number;
+    error?: string;
+    validationResult?: any;
+  }> {
+    
+    // Step 1: Validate member exists
+    const validation = await this.validateMemberBeforeSave(memberId, email, uniqueId);
+    
+    if (!validation.isValid) {
+      return {
+        success: false,
+        attempts: 0,
+        error: `Validation failed: ${validation.issues.join(', ')}`,
+        validationResult: validation
+      };
+    }
+    
+    // Step 2: Save with retry logic
+    let attempts = 0;
+    let lastError = '';
+    
+    while (attempts < maxRetries) {
+      attempts++;
+      
+      try {
+        // Create timestamp with attempt info for audit trail
+        const timestamp = new Date().toISOString();
+        const auditInfo = `[v${attempts}.${Date.now()} by ${associateName || 'Unknown'} at ${new Date().toLocaleString()}]`;
+        
+        // Add audit trail to content
+        const auditedComments = comments ? `${comments}\n\n${auditInfo}` : comments;
+        const auditedNotes = notes ? `${notes}\n\n${auditInfo}` : notes;
+        
+        // Use validated member data
+        await this.saveAnnotation(
+          validation.matchedMember.memberId,
+          validation.matchedMember.email,
+          auditedComments,
+          auditedNotes,
+          tags,
+          validation.matchedMember.uniqueId,
+          associateName,
+          timestamp
+        );
+        
+        // Brief wait for Google Sheets consistency
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Verify save by reading back data
+        const verifyData = await this.getMembershipData();
+        const savedMember = verifyData.find(m => m.memberId === validation.matchedMember.memberId);
+        
+        if (savedMember && (savedMember.comments?.includes(auditInfo) || savedMember.notes?.includes(auditInfo))) {
+          return { success: true, attempts, validationResult: validation };
+        } else {
+          throw new Error('Save verification failed - data not found in verification check');
+        }
+        
+      } catch (error) {
+        lastError = error.message;
+        console.warn(`Annotation save attempt ${attempts} failed:`, error.message);
+        
+        if (attempts < maxRetries) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delay = 1000 * Math.pow(2, attempts - 1);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    return { 
+      success: false, 
+      attempts, 
+      error: `Failed after ${maxRetries} attempts. Last error: ${lastError}`,
+      validationResult: validation
+    };
+  }
+
   async saveAnnotation(memberId: string, email: string, comments: string, notes: string, tags: string[], uniqueId?: string, associateName?: string, customTimestamp?: string): Promise<void> {
     try {
       // Save to Member_Annotations sheet first
