@@ -277,8 +277,8 @@ class GoogleSheetsService {
         rows[memberIndex][13] || '', // Preserve existing frozen
         rows[memberIndex][14] || '', // Preserve existing paid
         rows[memberIndex][15] || 'Active', // Preserve existing status
-        member.comments || rows[memberIndex][16] || '', // Update comments
-        member.notes || rows[memberIndex][17] || '', // Update notes
+        member.notes || rows[memberIndex][16] || '', // Update notes (column 16)
+        member.comments || rows[memberIndex][17] || '', // Update comments (column 17)
         member.associateInCharge || rows[memberIndex][18] || '', // Update associate in charge
         member.stage || rows[memberIndex][19] || '' // Update stage
       ] : [
@@ -300,8 +300,8 @@ class GoogleSheetsService {
         member.frozen || rows[memberIndex][13] || '',
         member.paid || rows[memberIndex][14] || '',
         member.status || rows[memberIndex][15] || 'Active',
-        member.comments || rows[memberIndex][16] || '',
-        member.notes || rows[memberIndex][17] || '',
+        member.notes || rows[memberIndex][16] || '', // Notes in column 16
+        member.comments || rows[memberIndex][17] || '', // Comments in column 17
         member.associateInCharge || rows[memberIndex][18] || '',
         member.stage || rows[memberIndex][19] || ''
       ];
@@ -586,10 +586,14 @@ class GoogleSheetsService {
         frozen: row[13] || '',
         paid: row[14] || '',
         status: row[15] || 'Active',
-        comments: row[16] || '',
-        notes: row[17] || '',
+        notes: row[16] || '', // Column 16 = Notes
+        comments: row[17] || '', // Column 17 = Comments
         associateInCharge: row[18] || '',
         stage: row[19] || '',
+        // Set text fields for modal compatibility
+        notesText: row[16] || '',
+        commentsText: row[17] || '',
+        tagsText: [],
         tags: [],
         aiTags: []
       }));
@@ -600,21 +604,29 @@ class GoogleSheetsService {
         const [annotationHeaders, ...annotationRows] = annotationsData;
         
         for (const annotationRow of annotationRows) {
-          const [memberId, email, comments, notes, tags] = annotationRow;
+          // Correct column mapping: ['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Unique ID', 'Associate Name', 'Timestamp']
+          const [memberId, email, comments, notes, tags, uniqueId, associateName, timestamp] = annotationRow;
           
-          const member = membershipData.find(m => m.memberId === memberId);
+          const member = membershipData.find(m => m.memberId === memberId || m.email === email);
           
           if (member) {
-            if (comments && comments.trim()) {
-              member.comments = comments;
+            // Use annotation data if main sheet data is empty, otherwise prefer main sheet data
+            if (comments && comments.trim() && (!member.commentsText || member.commentsText.trim() === '')) {
+              member.commentsText = comments;
             }
             
-            if (notes && notes.trim()) {
-              member.notes = notes;
+            if (notes && notes.trim() && (!member.notesText || member.notesText.trim() === '')) {
+              member.notesText = notes;
             }
             
-            if (tags && tags.trim()) {
-              member.tags = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+            if (tags && tags.trim() && (!member.tagsText || member.tagsText.length === 0)) {
+              const tagArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+              member.tagsText = tagArray;
+            }
+            
+            // Handle associate field from annotations
+            if (associateName && associateName.trim() && (!member.associateInCharge || member.associateInCharge.trim() === '')) {
+              member.associateInCharge = associateName;
             }
           }
         }

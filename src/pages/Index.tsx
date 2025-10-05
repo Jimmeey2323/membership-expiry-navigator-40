@@ -126,9 +126,17 @@ const DashboardContent = ({
               // Create a completely new object to ensure React detects the change
               return {
                 ...m,
+                // Update text fields (used by modal and table)
                 commentsText: comments,
                 notesText: notes,
-                tagsText: [...tags], // Ensure arrays are also new references
+                tagsText: [...tags],
+                // Update structured fields (for compatibility)
+                comments: comments,
+                notes: notes,
+                tags: tags,
+                // Update associate and stage fields
+                associateInCharge: associateInCharge || m.associateInCharge,
+                stage: stage || m.stage,
                 // Add a timestamp to force React to detect changes
                 lastUpdated: Date.now()
               };
@@ -157,14 +165,27 @@ const DashboardContent = ({
         const updateSingleMemberPromise = googleSheetsService.updateSingleMember(updatedMember);
 
         Promise.all([saveAnnotationPromise, updateSingleMemberPromise])
-          .then(() => {
+          .then(async () => {
             // Clear cache and refetch data to show updated annotations
             googleSheetsService.clearAnnotationsCache();
-            toast.success('Notes and comments saved successfully!');
-            // Optionally refetch to ensure sync with server
-            setTimeout(() => {
-              refetch();
-            }, 1000);
+            console.log('Annotations saved successfully, refreshing data...');
+            
+            // Force immediate refresh of the data
+            try {
+              const refreshedData = await refetch();
+              console.log('Data refreshed successfully:', refreshedData.data?.length || 0, 'records');
+              
+              // Update local data with refreshed data
+              if (refreshedData.data) {
+                setLocalMembershipData(refreshedData.data);
+                console.log('Local data updated with', refreshedData.data.length, 'records');
+              }
+              
+              toast.success('Notes and comments saved and refreshed successfully!');
+            } catch (refetchError) {
+              console.error('Failed to refresh data after save:', refetchError);
+              toast.success('Notes and comments saved! Please refresh the page to see updates.');
+            }
           })
           .catch(error => {
             console.error('Failed to save annotations to Google Sheets:', error);

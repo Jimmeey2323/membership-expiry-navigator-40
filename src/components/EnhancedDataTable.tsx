@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronDown, ChevronUp, Search, ArrowUpDown, Eye, Calendar, Activity, MapPin, User, Crown, Zap, Edit, MessageSquare, Filter, Grid, List, BarChart3, Trello, Clock, LayoutGrid, Users, UserCheck } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, ArrowUpDown, Eye, Calendar, Activity, MapPin, User, Crown, Zap, Edit, MessageSquare, Filter, Grid, List, BarChart3, Trello, Clock, LayoutGrid, Users, UserCheck, Lock } from "lucide-react";
 import { MembershipData, ViewMode } from "@/types/membership";
 import { MemberDetailModal } from "./MemberDetailModal";
+import { useAdmin } from "@/contexts/AdminContext";
 import { ViewSelector } from "./ViewSelector";
 import { processTextForDisplay, extractFirstName } from "@/lib/textUtils";
 import { formatDateTimeIST, parseAnnotationText, getCurrentMonthDateRange, isCurrentMonth } from "@/lib/dateUtils";
@@ -52,6 +53,9 @@ export const EnhancedDataTable = ({
   const [currentView, setCurrentView] = useState<ViewMode>('table');
   const [showCurrentMonthOnly, setShowCurrentMonthOnly] = useState(false);
   const itemsPerPage = 12;
+
+  // Admin context for sensitive data
+  const { isAdmin, showAdminPrompt } = useAdmin();
 
   // Get current month range for default filtering
   const currentMonthRange = useMemo(() => getCurrentMonthDateRange(), []);
@@ -211,6 +215,17 @@ export const EnhancedDataTable = ({
                           <Activity className="h-4 w-4 mr-2" />
                           {filteredAndSortedData.length} members
                         </Badge>
+                        {isAdmin && (
+                          <Button
+                            onClick={logout}
+                            variant="ghost"
+                            size="sm"
+                            className="text-white hover:bg-white/20 backdrop-blur-md border border-white/30"
+                          >
+                            <Lock className="h-4 w-4 mr-2" />
+                            Admin Logout
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -373,9 +388,23 @@ export const EnhancedDataTable = ({
                       Date/Time
                     </TableHead>
                     
-                    <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[200px] border-none">
-                      Notes
-                    </TableHead>
+                    {isAdmin ? (
+                      <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[200px] border-none">
+                        Notes
+                      </TableHead>
+                    ) : (
+                      <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[200px] border-none">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={showAdminPrompt}
+                          className="text-white hover:bg-white/20 flex items-center gap-2"
+                        >
+                          <Lock className="h-4 w-4" />
+                          Notes (Admin)
+                        </Button>
+                      </TableHead>
+                    )}
                     
                     <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[120px] border-none">
                       Tags
@@ -580,9 +609,9 @@ export const EnhancedDataTable = ({
                           })()}
                         </TableCell>
                         
-                        {/* Notes Column */}
+                        {/* Notes Column - Admin Only */}
                         <TableCell className="px-4 py-2 h-[35px] max-w-[200px]">
-                          {(() => {
+                          {isAdmin ? (() => {
                             // Handle both legacy string format and new structured format
                             const notesText = member.notesText || 
                               (Array.isArray(member.notes) ? member.notes.map(n => n.text).join('\n') : '') || '';
@@ -617,7 +646,17 @@ export const EnhancedDataTable = ({
                             ) : (
                               <span className="text-xs text-gray-400">No notes</span>
                             );
-                          })()}
+                          })() : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={showAdminPrompt}
+                              className="text-gray-500 hover:text-gray-700 flex items-center gap-2"
+                            >
+                              <Lock className="h-3 w-3" />
+                              Protected
+                            </Button>
+                          )}
                         </TableCell>
                         
                         <TableCell className="px-4 py-2 h-[35px]">
