@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -402,6 +402,9 @@ const DashboardContent = ({
           </div>
 
         <TabsContent value="members" className="space-y-6">
+          <div className="text-sm text-gray-600 mb-4">
+            Showing {filteredData.length} members
+          </div>
           <EnhancedDataTable
             key={refreshKey}
             data={filteredData}

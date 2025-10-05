@@ -24,8 +24,6 @@ export const AppLayout = ({ children, filterData, showFilterSidebar = false }: A
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true); // Collapsed by default
   const location = useLocation();
 
-
-
   return (
     <div className="flex h-screen bg-white flex-col">
       {/* Modern Refined Header */}
@@ -123,38 +121,31 @@ export const AppLayout = ({ children, filterData, showFilterSidebar = false }: A
       </header>
 
       {/* Content Area */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Mobile sidebar backdrop */}
-        {sidebarOpen && (
-          <div 
-            className="fixed inset-0 z-40 bg-black bg-opacity-75 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
+      <div className="flex flex-1 overflow-hidden relative">
 
         {/* Filter Sidebar */}
         {showFilterSidebar && filterData && (
-          <div className={`
-            fixed inset-y-0 left-0 z-50 bg-slate-50/95 backdrop-blur-sm shadow-2xl border-r border-slate-200 lg:relative lg:translate-x-0
-            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-            ${sidebarCollapsed ? 'w-16 lg:w-16' : 'w-80 lg:w-80'}
-            transition-all duration-300 ease-in-out lg:flex lg:flex-shrink-0
-            h-[calc(100vh-5rem)] lg:h-[calc(100vh-5rem)] mt-20 lg:mt-20
+          <aside className={`
+            fixed inset-y-0 left-0 z-30 bg-slate-50/95 backdrop-blur-sm shadow-2xl border-r border-slate-200
+            lg:static lg:translate-x-0
+            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+            ${sidebarCollapsed ? 'lg:w-16' : 'lg:w-80'}
+            transition-all duration-300 ease-in-out flex-shrink-0
+            top-[5rem] lg:top-0 h-[calc(100vh-5rem)] lg:h-full
+            w-80
           `}>
             <div className="flex flex-col h-full bg-white rounded-tr-xl border border-slate-200 shadow-inner">
               {/* Close button for mobile */}
-              {sidebarOpen && (
-                <div className="flex justify-end p-4 lg:hidden">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSidebarOpen(false)}
-                    className="text-gray-600 hover:text-gray-900"
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
-                </div>
-              )}
+              <div className="flex justify-end p-4 lg:hidden">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSidebarOpen(false)}
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
 
               {/* Filter Panel Content */}
               <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
@@ -208,11 +199,11 @@ export const AppLayout = ({ children, filterData, showFilterSidebar = false }: A
                 )}
               </div>
             </div>
-          </div>
+          </aside>
         )}
 
         {/* Main content */}
-        <main className="flex-1 p-6 bg-white overflow-auto">
+        <main className="flex-1 p-6 bg-white overflow-auto min-w-0">
           {children}
         </main>
       </div>

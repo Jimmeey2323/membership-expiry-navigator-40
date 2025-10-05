@@ -16,7 +16,7 @@ import {
   Tag, Clock, TrendingUp, AlertCircle, Star,
   Phone, Building, Users, Edit2, Check, UserCircle, Brain
 } from "lucide-react";
-import { MembershipData } from "@/types/membership";
+import { MembershipData, MEMBER_STAGES } from "@/types/membership";
 import { googleSheetsService } from "@/services/googleSheets";
 import { toast } from "sonner";
 import { cleanText, toSentenceCase } from "@/lib/textUtils";
@@ -877,6 +877,27 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                         </SelectContent>
                       </Select>
                     </div>
+                    
+                    <div>
+                      <Label htmlFor="member-stage">Member Interaction Stage</Label>
+                      <Select value={member.stage || ''} onValueChange={(value) => {
+                        if (member) {
+                          member.stage = value;
+                        }
+                      }}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select stage based on recent interactions..." />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60">
+                          {MEMBER_STAGES.map((stage) => (
+                            <SelectItem key={stage} value={stage}>
+                              {stage}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
                     <Textarea
                       placeholder="Add a comment about this member..."
                       value={newComment}

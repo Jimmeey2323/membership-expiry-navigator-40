@@ -18,6 +18,13 @@ class GoogleSheetsService {
   private spreadsheetId = "1rGMDDvvTbZfNg1dueWtRN3LhOgGQOdLg3Fd7Sn1GCZo";
   private sheetName = "Expirations";
   private annotationsSheetName = "Member_Annotations";
+  
+  private expectedHeaders = [
+    'Unique Id', 'Member ID', 'First Name', 'Last Name', 'Email', 
+    'Membership Name', 'End Date', 'Home Location', 'Current Usage', 
+    'ID Col', 'Order At', 'Sold By', 'Membership Id', 'Frozen', 'Paid', 
+    'Status', 'Notes', 'Comments', 'Associate In Charge', 'Stage'
+  ];
 
   async getAccessToken(): Promise<string> {
     try {
@@ -46,10 +53,44 @@ class GoogleSheetsService {
     }
   }
 
+  async ensureSheetHeaders(): Promise<void> {
+    try {
+      const currentData = await this.fetchSheetData();
+      
+      if (currentData.length === 0) {
+        // Sheet is empty, add headers
+        await this.updateMemberData([this.expectedHeaders]);
+        return;
+      }
+
+      const [currentHeaders] = currentData;
+      
+      // Check if we need to update headers
+      if (currentHeaders.length < this.expectedHeaders.length) {
+        console.log(`Updating sheet headers from ${currentHeaders.length} to ${this.expectedHeaders.length} columns`);
+        
+        // Ensure all data rows have the correct number of columns
+        const [, ...rows] = currentData;
+        const updatedRows = rows.map(row => {
+          const newRow = [...row];
+          while (newRow.length < this.expectedHeaders.length) {
+            newRow.push('');
+          }
+          return newRow;
+        });
+        
+        await this.updateMemberData([this.expectedHeaders, ...updatedRows]);
+      }
+    } catch (error) {
+      console.error('Error ensuring sheet headers:', error);
+      throw error;
+    }
+  }
+
   async fetchSheetData(): Promise<any[][]> {
     try {
       const accessToken = await this.getAccessToken();
-      const range = `${this.sheetName}!A:R`;
+      const range = `${this.sheetName}!A:T`;
       
       const response = await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}/values/${range}`,
@@ -168,10 +209,10 @@ class GoogleSheetsService {
   async updateMemberData(values: any[][]): Promise<void> {
     try {
       const accessToken = await this.getAccessToken();
-      const range = `${this.sheetName}!A:R`;
+      const range = `${this.sheetName}!A:T`;
       
       const response = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}/values/${range}?valueInputOption=RAW`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}/values/${range}?valueInputOption=USER_ENTERED`,
         {
           method: 'PUT',
           headers: {
@@ -185,8 +226,13 @@ class GoogleSheetsService {
       );
 
       if (!response.ok) {
-        throw new Error('Failed to update member data');
+        const errorText = await response.text();
+        console.error(`Failed to update member data. Status: ${response.status}, Error: ${errorText}`);
+        throw new Error(`Failed to update member data: ${response.status} - ${errorText}`);
       }
+      
+      const result = await response.json();
+      console.log('Successfully updated member data:', result);
     } catch (error) {
       console.error('Error updating member data:', error);
       throw error;
@@ -195,10 +241,14 @@ class GoogleSheetsService {
 
   async updateSingleMember(member: any): Promise<void> {
     try {
+      // Ensure sheet has proper headers first
+      await this.ensureSheetHeaders();
+      
       const currentData = await this.fetchSheetData();
       if (currentData.length === 0) return;
 
       const [headers, ...rows] = currentData;
+      console.log(`Sheet has ${headers.length} columns, ${rows.length} data rows`);
       
       const memberIndex = rows.findIndex(row => 
         (member.uniqueId && row[0] === member.uniqueId) || 
@@ -257,7 +307,18 @@ class GoogleSheetsService {
       ];
       
       rows[memberIndex] = updatedRow;
-      await this.updateMemberData([headers, ...rows]);
+      
+      // Ensure all rows have the correct number of columns
+      const normalizedRows = rows.map(row => {
+        const newRow = [...row];
+        while (newRow.length < this.expectedHeaders.length) {
+          newRow.push('');
+        }
+        return newRow;
+      });
+      
+      console.log(`Updating sheet with ${headers.length} header columns and ${normalizedRows[0]?.length || 0} data columns`);
+      await this.updateMemberData([headers, ...normalizedRows]);
     } catch (error) {
       console.error('Error updating single member:', error);
       throw error;

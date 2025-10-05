@@ -81,8 +81,8 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
     
     setIsSaving(true);
     try {
-      // Use enhanced save method with validation and retry logic
-      const result = await googleSheetsService.saveAnnotationWithRetry(
+      // Use direct save method with all parameters including stage and associateInCharge
+      await googleSheetsService.saveAnnotation(
         member.memberId,
         member.email,
         comments,
@@ -90,68 +90,15 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
         tags,
         member.uniqueId,
         associateName,
-        3 // max retries
+        new Date().toISOString(),
+        associateInCharge,
+        stage
       );
       
-      if (result.success) {
-        // Success with detailed feedback
-        toast.success(
-          `Annotations saved successfully! (${result.attempts} attempt${result.attempts > 1 ? 's' : ''})`
-        );
-        
-        // Show validation confidence if not 100%
-        if (result.validationResult?.confidence < 100) {
-          toast.info(
-            `Data validation: ${result.validationResult.confidence}% confidence - ${result.validationResult.issues.join(', ')}`
-          );
-        }
-        
-        onSave(member.memberId, comments, notes, tags, associateName, associateInCharge, stage);
-        onClose();
-      } else {
-        // Detailed error information
-        console.error('Enhanced save failed:', result);
-        toast.error(`Save failed: ${result.error}`);
-        
-        if (result.validationResult?.issues?.length > 0) {
-          toast.warning(
-            `Data issues detected: ${result.validationResult.issues.join(', ')}`
-          );
-        }
-        
-        // Fallback to basic save if validation failed
-        if (!result.validationResult?.isValid) {
-          const shouldFallback = confirm(
-            `Validation failed (${result.validationResult?.confidence || 0}% confidence). Save anyway using basic method?`
-          );
-          
-          if (shouldFallback) {
-            try {
-              const timestamp = new Date().toISOString();
-              const fallbackComments = comments ? 
-                `${comments}\n\n[FALLBACK SAVE by ${associateName} on ${new Date().toLocaleDateString()} - Validation Issues: ${result.validationResult?.issues.join(', ')}]` : 
-                comments;
-              
-              await googleSheetsService.saveAnnotation(
-                member.memberId,
-                member.email,
-                fallbackComments,
-                notes,
-                tags,
-                member.uniqueId,
-                associateName,
-                timestamp
-              );
-              
-              onSave(member.memberId, fallbackComments, notes, tags, associateName, associateInCharge, stage);
-              toast.warning("Saved using fallback method - please verify data accuracy");
-              onClose();
-            } catch (fallbackError) {
-              toast.error("Both enhanced and fallback saves failed. Please try again.");
-            }
-          }
-        }
-      }
+      // Success feedback
+      toast.success('Annotations saved successfully!');
+      onSave(member.memberId, comments, notes, tags, associateName, associateInCharge, stage);
+      onClose();
     } catch (error) {
       console.error('Error in enhanced save process:', error);
       toast.error("Unexpected error occurred. Please try again.");

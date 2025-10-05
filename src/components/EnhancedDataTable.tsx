@@ -267,9 +267,9 @@ export const EnhancedDataTable = ({
               {currentView === 'table' && (
                 <>
                   {/* Ultra-Modern Table */}
-                  <div className="relative overflow-hidden rounded-2xl shadow-2xl">
+                  <div className="relative overflow-x-auto rounded-2xl shadow-2xl">
                     <div className="absolute inset-0 bg-gradient-to-r from-white via-indigo-50/20 to-white"></div>
-                    <Table className="relative">
+                    <Table className="relative min-w-[1400px]">
                 <TableHeader>
                   <TableRow className="bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-900 hover:bg-gradient-to-r hover:from-indigo-900 hover:via-purple-900 hover:to-indigo-900 border-none h-14">
                     <TableHead className="text-white font-semibold text-sm h-14 px-4 border-none">
@@ -348,7 +348,7 @@ export const EnhancedDataTable = ({
                         className="h-auto p-0 font-semibold text-white hover:text-white/80 hover:bg-transparent"
                         onClick={() => handleSort('soldBy')}
                       >
-                        <User className="h-4 w-4 mr-2" />
+                        <Users className="h-4 w-4 mr-2" />
                         Associate {getSortIcon('soldBy')}
                       </Button>
                     </TableHead>
@@ -458,11 +458,12 @@ export const EnhancedDataTable = ({
                         
                         <TableCell className="px-4 py-2 h-[35px] text-center">
                           <Badge 
-                            variant={(member.sessionsLeft || 0) > 10 ? "default" : (member.sessionsLeft || 0) > 3 ? "secondary" : (member.sessionsLeft || 0) > 0 ? "outline" : "destructive"}
+                            variant={(member.sessionsLeft || 0) > 10 ? "default" : (member.sessionsLeft || 0) > 3 ? "secondary" : (member.sessionsLeft || 0) > 0 ? "outline" : "secondary"}
                             className={`font-medium text-xs px-2 py-1 ${
                               (member.sessionsLeft || 0) > 10 ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
                               (member.sessionsLeft || 0) > 3 ? 'bg-blue-100 text-blue-800 border-blue-300' :
-                              (member.sessionsLeft || 0) > 0 ? 'bg-amber-100 text-amber-800 border-amber-300' : ''
+                              (member.sessionsLeft || 0) > 0 ? 'bg-amber-100 text-amber-800 border-amber-300' : 
+                              'bg-gray-100 text-gray-600 border-gray-300'
                             }`}
                           >
                             {member.sessionsLeft || 0}
