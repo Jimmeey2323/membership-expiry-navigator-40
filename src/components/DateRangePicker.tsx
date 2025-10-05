@@ -1,8 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
-import { CalendarIcon, X } from "lucide-react";
+import { X } from "lucide-react";
 import { DateRange } from "@/contexts/FilterContext";
 
 interface DateRangePickerProps {
@@ -45,73 +44,72 @@ export const DateRangePicker = ({ value, onChange, className }: DateRangePickerP
   };
 
   return (
-    <Card className={className}>
-      <CardContent className="p-4 space-y-4">
-        <div className="flex items-center gap-2">
-          <CalendarIcon className="h-4 w-4" />
-          <Label className="text-sm font-medium">Date Range</Label>
+    <div className={className}>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-slate-600">Date Range</span>
           {(value.start || value.end) && (
             <Button
               variant="ghost"
               size="sm"
               onClick={clearDates}
-              className="h-6 w-6 p-0"
+              className="h-4 w-4 p-0 text-slate-400 hover:text-red-500"
             >
-              <X className="h-3 w-3" />
+              <X className="h-2.5 w-2.5" />
             </Button>
           )}
         </div>
         
-        <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
           <div>
-            <Label htmlFor="start-date" className="text-xs">From</Label>
+            <Label htmlFor="start-date" className="text-xs text-slate-500">From</Label>
             <Input
               id="start-date"
               type="date"
               value={value.start}
               onChange={handleStartDateChange}
-              className="text-sm"
+              className="text-xs h-7"
             />
           </div>
           <div>
-            <Label htmlFor="end-date" className="text-xs">To</Label>
+            <Label htmlFor="end-date" className="text-xs text-slate-500">To</Label>
             <Input
               id="end-date"
               type="date"
               value={value.end}
               onChange={handleEndDateChange}
-              className="text-sm"
+              className="text-xs h-7"
             />
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-1">
+        <div className="grid grid-cols-3 gap-1">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setQuickRange(7)}
-            className="text-xs h-7"
+            className="text-xs h-6 px-1"
           >
-            Last 7 days
+            7d
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setQuickRange(30)}
-            className="text-xs h-7"
+            className="text-xs h-6 px-1"
           >
-            Last 30 days
+            30d
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setQuickRange(90)}
-            className="text-xs h-7"
+            className="text-xs h-6 px-1"
           >
-            Last 90 days
+            90d
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };

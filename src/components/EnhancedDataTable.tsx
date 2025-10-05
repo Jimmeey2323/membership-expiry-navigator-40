@@ -7,18 +7,18 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronDown, ChevronUp, Search, ArrowUpDown, Eye, Calendar, Activity, MapPin, User, Crown, Zap, Edit, MessageSquare, Filter, Grid, List, BarChart3, Trello, Clock, LayoutGrid } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, ArrowUpDown, Eye, Calendar, Activity, MapPin, User, Crown, Zap, Edit, MessageSquare, Filter, Grid, List, BarChart3, Trello, Clock, LayoutGrid, Users, UserCheck } from "lucide-react";
 import { MembershipData, ViewMode } from "@/types/membership";
 import { MemberDetailModal } from "./MemberDetailModal";
 import { ViewSelector } from "./ViewSelector";
-import { processTextForDisplay } from "@/lib/textUtils";
+import { processTextForDisplay, extractFirstName } from "@/lib/textUtils";
 import { formatDateTimeIST, parseAnnotationText, getCurrentMonthDateRange, isCurrentMonth } from "@/lib/dateUtils";
 
 interface EnhancedDataTableProps {
   data: MembershipData[];
   title: string;
   className?: string;
-  onAnnotationUpdate?: (memberId: string, comments: string, notes: string, tags: string[], associate?: string) => void;
+  onAnnotationUpdate?: (memberId: string, comments: string, notes: string, tags: string[], associate?: string, associateInCharge?: string, stage?: string) => void;
   onEditMember?: (member: MembershipData) => void;
   onFollowUpMember?: (member: MembershipData) => void;
 }
@@ -147,9 +147,9 @@ export const EnhancedDataTable = ({
     setIsDetailModalOpen(true);
   };
 
-  const handleAnnotationSave = (memberId: string, comments: string, notes: string, tags: string[], associate?: string) => {
+  const handleAnnotationSave = (memberId: string, comments: string, notes: string, tags: string[], associate?: string, associateInCharge?: string, stage?: string) => {
     if (onAnnotationUpdate) {
-      onAnnotationUpdate(memberId, comments, notes, tags, associate);
+      onAnnotationUpdate(memberId, comments, notes, tags, associate, associateInCharge, stage);
     }
     setIsDetailModalOpen(false);
     setSelectedMember(null);
@@ -359,7 +359,13 @@ export const EnhancedDataTable = ({
                     </TableHead>
                     
                     <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[150px] border-none">
-                      Associate
+                      <UserCheck className="h-4 w-4 mr-2 inline" />
+                      Associate In Charge
+                    </TableHead>
+                    
+                    <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[180px] border-none">
+                      <Users className="h-4 w-4 mr-2 inline" />
+                      Stage
                     </TableHead>
                     
                     <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[140px] border-none">
@@ -494,7 +500,7 @@ export const EnhancedDataTable = ({
                         <TableCell className="px-4 py-2 h-[35px]">
                           <div className="flex items-center gap-2">
                             <User className="h-3 w-3 text-slate-500" />
-                            <span className="text-slate-700 font-normal text-sm">{member.soldBy || 'Not assigned'}</span>
+                            <span className="text-slate-700 font-normal text-sm">{extractFirstName(member.soldBy || 'Not assigned')}</span>
                           </div>
                         </TableCell>
                         
@@ -533,26 +539,25 @@ export const EnhancedDataTable = ({
                           })()}
                         </TableCell>
                         
-                        {/* Associate Column */}
+                        {/* Associate In Charge Column */}
                         <TableCell className="px-4 py-2 h-[35px]">
-                          {(() => {
-                            // Handle both legacy string format and new structured format
-                            const commentsText = member.commentsText || 
-                              (Array.isArray(member.comments) ? member.comments.map(c => c.text).join('\n') : '') || '';
-                            const parsedComments = parseAnnotationText(commentsText);
-                            const latestComment = parsedComments[parsedComments.length - 1];
-                            
-                            return latestComment?.createdBy ? (
-                              <div className="flex items-center gap-1">
-                                <User className="h-3 w-3 text-slate-500" />
-                                <span className="text-xs text-slate-700 font-medium truncate">
-                                  {latestComment.createdBy}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-gray-400">-</span>
-                            );
-                          })()}
+                          <div className="flex items-center gap-1">
+                            <UserCheck className="h-3 w-3 text-slate-500" />
+                            <span className="text-xs text-slate-700 font-medium truncate">
+                              {extractFirstName(member.associateInCharge || '-')}
+                            </span>
+                          </div>
+                        </TableCell>
+                        
+                        {/* Stage Column */}
+                        <TableCell className="px-4 py-2 h-[35px] max-w-[180px]">
+                          {member.stage ? (
+                            <Badge variant="outline" className="text-xs truncate max-w-full">
+                              {member.stage}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-gray-400">No stage set</span>
+                          )}
                         </TableCell>
                         
                         {/* Date/Time Column */}

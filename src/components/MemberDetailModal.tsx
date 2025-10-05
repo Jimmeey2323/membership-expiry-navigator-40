@@ -34,7 +34,7 @@ interface MemberDetailModalProps {
   member: MembershipData | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (memberId: string, comments: string, notes: string, tags: string[], associate?: string) => void;
+  onSave: (memberId: string, comments: string, notes: string, tags: string[], associate?: string, associateInCharge?: string, stage?: string) => void;
 }
 
 interface Comment {
@@ -381,7 +381,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
         member.uniqueId // Add unique ID for better persistence
       );
       
-      onSave(member.memberId, allComments, allNotes, tagsForSaving, latestAssociate);
+      onSave(member.memberId, allComments, allNotes, tagsForSaving, latestAssociate, member.associateInCharge, member.stage);
       toast.success("Member details saved successfully!");
       onClose();
     } catch (error) {
@@ -777,7 +777,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                                   aiChurnRisk: undefined,
                                   aiAnalysisDate: undefined
                                 };
-                                onSave(member.memberId, extractStructuredText(member.commentsText, member.comments), extractStructuredText(member.notesText, member.notes), (member.tagsText || member.tags || []).map(t => typeof t === 'string' ? t : (t as any)?.text || String(t)), 'System');
+                                onSave(member.memberId, extractStructuredText(member.commentsText, member.comments), extractStructuredText(member.notesText, member.notes), (member.tagsText || member.tags || []).map(t => typeof t === 'string' ? t : (t as any)?.text || String(t)), 'System', member.associateInCharge, member.stage);
                                 toast.success('AI tags cleared successfully');
                                 onClose();
                               } catch (error) {

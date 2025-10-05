@@ -10,11 +10,11 @@ import { LapsingMembers } from "@/components/LapsingMembers";
 import { MetricsDashboard } from "@/components/MetricsDashboard";
 import { PremiumCharts } from "@/components/PremiumCharts";
 import { AIAnalytics } from "@/components/AIAnalytics";
-import { GlobalFilterPanel } from "@/components/GlobalFilterPanel";
 import { AddMemberModal } from "@/components/AddMemberModal";
 import { EditMemberModal } from "@/components/EditMemberModal";
 import { FollowUpModal, FollowUpEntry } from "@/components/FollowUpModal";
 import { AIAnalysisModal } from "@/components/AIAnalysisModal";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { FilterProvider, useFilters } from "@/contexts/FilterContext";
 import { googleSheetsService } from "@/services/googleSheets";
 import { MembershipData } from "@/types/membership";
@@ -41,42 +41,27 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const DashboardContent = () => {
+interface DashboardContentProps {
+  membershipData: MembershipData[];
+  localMembershipData: MembershipData[];
+  setLocalMembershipData: React.Dispatch<React.SetStateAction<MembershipData[]>>;
+  refetch: () => Promise<any>;
+  isLoading: boolean;
+}
+
+const DashboardContent = ({ 
+  membershipData, 
+  localMembershipData, 
+  setLocalMembershipData, 
+  refetch, 
+  isLoading 
+}: DashboardContentProps) => {
   const { getFilteredData } = useFilters();
-  const [localMembershipData, setLocalMembershipData] = useState<MembershipData[]>([]);
   const [followUps, setFollowUps] = useState<FollowUpEntry[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedMember, setSelectedMember] = useState<MembershipData | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
-
-  const { data: membershipData, refetch, isLoading, error } = useQuery({
-    queryKey: ["membershipData"],
-    queryFn: async () => {
-      try {
-        console.log("Fetching membership data...");
-        // Fetch fresh data and remap annotations
-        const data = await googleSheetsService.getMembershipData();
-        console.log("Membership data fetched successfully:", data?.length || 0, "records");
-        
-        // Trigger annotation refresh in the background
-        setTimeout(() => {
-          googleSheetsService.fetchAnnotations().catch((err) => {
-            console.warn("Annotations fetch failed:", err);
-          });
-        }, 100);
-        return data;
-      } catch (error) {
-        console.error("Error fetching membership data:", error);
-        // Return empty array instead of throwing to prevent crash
-        return [];
-      }
-    },
-    refetchInterval: 30000,
-    refetchOnWindowFocus: true,
-    staleTime: 0, // Always consider data stale to force fresh fetching
-    retry: false, // Don't retry on failure to prevent endless loading
-  });
 
   useEffect(() => {
     if (membershipData && Array.isArray(membershipData)) {
@@ -100,26 +85,7 @@ const DashboardContent = () => {
     }
   }, [membershipData]);
 
-  if (error) {
-    console.error("Query error:", error);
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6 flex items-center justify-center">
-        <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl max-w-md">
-          <CardHeader>
-            <CardTitle className="text-red-600">Connection Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-slate-600 mb-4">Unable to fetch membership data. Please check your connection and try again.</p>
-            <p className="text-xs text-slate-400 mb-4">Error: {error?.message || 'Unknown error'}</p>
-            <Button onClick={() => refetch()} className="w-full">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Retry
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+
 
   if (isLoading) {
     return (
@@ -137,7 +103,7 @@ const DashboardContent = () => {
     );
   }
 
-    const handleAnnotationUpdate = (memberId: string, comments: string, notes: string, tags: string[], associate?: string) => {
+    const handleAnnotationUpdate = (memberId: string, comments: string, notes: string, tags: string[], associate?: string, associateInCharge?: string, stage?: string) => {
       // Save annotations to both Member_Annotations and Expirations sheets
       const member = localMembershipData.find(member => member.memberId === memberId);
       if (member) {
@@ -149,7 +115,9 @@ const DashboardContent = () => {
           ...member,
           commentsText: comments, // Use commentsText for legacy compatibility
           notesText: notes,
-          tagsText: tags
+          tagsText: tags,
+          associateInCharge: associateInCharge || member.associateInCharge,
+          stage: stage || member.stage
         };
         
         setLocalMembershipData(prev => {
@@ -315,10 +283,6 @@ const DashboardContent = () => {
       <div className="absolute bottom-10 left-10 w-96 h-96 bg-gradient-to-tr from-indigo-200/20 to-purple-200/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
       
       <div className="relative z-10">
-        {/* Global Filter Panel - Enhanced */}
-        <div className="mb-6">
-          <GlobalFilterPanel data={localMembershipData} />
-        </div>
 
         {/* Refined Dashboard Header */}
         <div className="relative">
@@ -540,8 +504,115 @@ const DashboardContent = () => {
 const Index = () => {
   return (
     <FilterProvider>
-      <DashboardContent />
+      <DashboardContentWithLayout />
     </FilterProvider>
+  );
+};
+
+const DashboardContentWithLayout = () => {
+  const [localMembershipData, setLocalMembershipData] = useState<MembershipData[]>([]);
+
+  const { data: membershipData, refetch, isLoading, error } = useQuery({
+    queryKey: ["membershipData"],
+    queryFn: async () => {
+      try {
+        console.log("Fetching membership data...");
+        // Fetch fresh data and remap annotations
+        const data = await googleSheetsService.getMembershipData();
+        console.log("Membership data fetched successfully:", data?.length || 0, "records");
+        
+        // Trigger annotation refresh in the background
+        setTimeout(() => {
+          googleSheetsService.fetchAnnotations().catch((err) => {
+            console.warn("Annotations fetch failed:", err);
+          });
+        }, 100);
+        return data;
+      } catch (error) {
+        console.error("Error fetching membership data:", error);
+        // Return empty array instead of throwing to prevent crash
+        return [];
+      }
+    },
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
+    staleTime: 0, // Always consider data stale to force fresh fetching
+    retry: false, // Don't retry on failure to prevent endless loading
+  });
+
+  useEffect(() => {
+    if (membershipData && Array.isArray(membershipData)) {
+      console.log("Processing membership data:", membershipData.length, "records");
+      
+      // Check for corrupted records
+      const corruptedRecords = (membershipData as MembershipData[]).filter((m: MembershipData) => 
+        !m?.membershipName || m.membershipName.trim() === '' || 
+        !m?.location || m.location.trim() === ''
+      );
+      
+      if (corruptedRecords.length > 0) {
+        console.warn("Corrupted records found:", corruptedRecords.length);
+        toast.error(`Warning: ${corruptedRecords.length} records have missing membership or location data`);
+      }
+      
+      setLocalMembershipData(membershipData as MembershipData[]);
+    } else {
+      console.log("No valid membership data available");
+      setLocalMembershipData([]);
+    }
+  }, [membershipData]);
+
+  if (error) {
+    console.error("Query error:", error);
+    return (
+      <AppLayout 
+        filterData={localMembershipData || []} 
+        showFilterSidebar={true}
+      >
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6 flex items-center justify-center">
+          <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl max-w-md">
+            <CardHeader>
+              <CardTitle className="text-red-600">Connection Error</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p>Unable to connect to Google Sheets. Please check your internet connection and try again.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <AppLayout filterData={localMembershipData || []} showFilterSidebar={true}>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6 flex items-center justify-center">
+          <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl max-w-md">
+            <CardHeader>
+              <CardTitle>Loading Dashboard</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+                <span>Fetching membership data from Google Sheets...</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout filterData={localMembershipData || []} showFilterSidebar={true}>
+      <DashboardContent 
+        membershipData={membershipData}
+        localMembershipData={localMembershipData}
+        setLocalMembershipData={setLocalMembershipData}
+        refetch={refetch}
+        isLoading={isLoading}
+      />
+    </AppLayout>
   );
 };
 

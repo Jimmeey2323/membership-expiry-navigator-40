@@ -6,17 +6,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AssociateSelector } from "@/components/ui/associate-selector";
-import { X, Plus, Save, Shield, RefreshCw } from "lucide-react";
-import { MembershipData } from "@/types/membership";
+import { X, Plus, Save, Shield, RefreshCw, Users, UserCheck } from "lucide-react";
+import { MembershipData, MEMBER_STAGES } from "@/types/membership";
 import { googleSheetsService } from "@/services/googleSheets";
+import { extractFirstName } from "@/lib/textUtils";
 import { toast } from "sonner";
 
 interface MemberAnnotationsProps {
   member: MembershipData | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (memberId: string, comments: string, notes: string, tags: string[]) => void;
+  onSave: (memberId: string, comments: string, notes: string, tags: string[], associate?: string, associateInCharge?: string, stage?: string) => void;
 }
 
 export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnnotationsProps) => {
@@ -25,6 +27,8 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
   const [associateName, setAssociateName] = useState('');
+  const [associateInCharge, setAssociateInCharge] = useState('');
+  const [stage, setStage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [validationResult, setValidationResult] = useState<any>(null);
   const [showValidation, setShowValidation] = useState(false);
@@ -33,10 +37,23 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
   // Reset form when member changes or dialog opens
   useEffect(() => {
     if (member && isOpen) {
-      setComments(member.comments || '');
-      setNotes(member.notes || '');
-      setTags(member.tags || []);
+      // Handle structured comments/notes or fallback to text versions
+      const commentsText = Array.isArray(member.comments) 
+        ? member.comments.map(c => c.text).join('\n') 
+        : (member.commentsText || '');
+      const notesText = Array.isArray(member.notes) 
+        ? member.notes.map(n => n.text).join('\n') 
+        : (member.notesText || '');
+      const tagsArray = Array.isArray(member.tags) 
+        ? member.tags.map(t => t.text || String(t)) 
+        : (member.tagsText || []);
+        
+      setComments(commentsText);
+      setNotes(notesText);
+      setTags(tagsArray);
       setAssociateName('');
+      setAssociateInCharge(member.associateInCharge || '');
+      setStage(member.stage || '');
       setNewTag('');
       setValidationResult(null);
       setShowValidation(false);
@@ -89,7 +106,7 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
           );
         }
         
-        onSave(member.memberId, comments, notes, tags);
+        onSave(member.memberId, comments, notes, tags, associateName, associateInCharge, stage);
         onClose();
       } else {
         // Detailed error information
@@ -126,7 +143,7 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
                 timestamp
               );
               
-              onSave(member.memberId, fallbackComments, notes, tags);
+              onSave(member.memberId, fallbackComments, notes, tags, associateName, associateInCharge, stage);
               toast.warning("Saved using fallback method - please verify data accuracy");
               onClose();
             } catch (fallbackError) {
@@ -280,15 +297,48 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
             )}
           </div>
 
-          {/* Associate Name */}
+          {/* Stage Selection */}
           <div className="space-y-2">
-            <AssociateSelector
-              label="Associate Name"
-              value={associateName}
-              onValueChange={setAssociateName}
-              placeholder="Select associate handling this update"
-              required
-            />
+            <Label className="text-base font-medium flex items-center gap-2">
+              <UserCheck className="h-4 w-4" />
+              Member Interaction Stage
+            </Label>
+            <Select value={stage} onValueChange={setStage}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select appropriate stage based on recent interactions" />
+              </SelectTrigger>
+              <SelectContent className="max-h-60">
+                {MEMBER_STAGES.map((stageOption) => (
+                  <SelectItem key={stageOption} value={stageOption}>
+                    {stageOption}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="text-xs text-muted-foreground">
+              Choose the stage that best reflects the member's current situation
+            </div>
+          </div>
+
+          {/* Associates Section */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <AssociateSelector
+                label="Associate"
+                value={associateName}
+                onValueChange={setAssociateName}
+                placeholder="Select primary associate"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <AssociateSelector
+                label="Associate In Charge"
+                value={associateInCharge}
+                onValueChange={setAssociateInCharge}
+                placeholder="Select associate in charge"
+              />
+            </div>
           </div>
 
           {/* Comments */}

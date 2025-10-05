@@ -228,7 +228,9 @@ class GoogleSheetsService {
         rows[memberIndex][14] || '', // Preserve existing paid
         rows[memberIndex][15] || 'Active', // Preserve existing status
         member.comments || rows[memberIndex][16] || '', // Update comments
-        member.notes || rows[memberIndex][17] || '' // Update notes
+        member.notes || rows[memberIndex][17] || '', // Update notes
+        member.associateInCharge || rows[memberIndex][18] || '', // Update associate in charge
+        member.stage || rows[memberIndex][19] || '' // Update stage
       ] : [
         member.uniqueId || rows[memberIndex][0] || '',
         member.memberId || rows[memberIndex][1] || '',
@@ -249,7 +251,9 @@ class GoogleSheetsService {
         member.paid || rows[memberIndex][14] || '',
         member.status || rows[memberIndex][15] || 'Active',
         member.comments || rows[memberIndex][16] || '',
-        member.notes || rows[memberIndex][17] || ''
+        member.notes || rows[memberIndex][17] || '',
+        member.associateInCharge || rows[memberIndex][18] || '',
+        member.stage || rows[memberIndex][19] || ''
       ];
       
       rows[memberIndex] = updatedRow;
@@ -387,7 +391,9 @@ class GoogleSheetsService {
           tags,
           validation.matchedMember.uniqueId,
           associateName,
-          timestamp
+          timestamp,
+          undefined, // associateInCharge - not available in this context
+          undefined  // stage - not available in this context
         );
         
         // Brief wait for Google Sheets consistency
@@ -444,7 +450,7 @@ class GoogleSheetsService {
     return `${dateStr}, ${timeStr}`;
   }
 
-  async saveAnnotation(memberId: string, email: string, comments: string, notes: string, tags: string[], uniqueId?: string, associateName?: string, customTimestamp?: string): Promise<void> {
+  async saveAnnotation(memberId: string, email: string, comments: string, notes: string, tags: string[], uniqueId?: string, associateName?: string, customTimestamp?: string, associateInCharge?: string, stage?: string): Promise<void> {
     try {
       // Format timestamp in IST (DD-MM-YYYY, HH:MM:SS format)
       const istTimestamp = this.formatDateTimeIST(customTimestamp ? new Date(customTimestamp) : new Date());
@@ -480,6 +486,8 @@ class GoogleSheetsService {
         memberId,
         comments,
         notes,
+        associateInCharge,
+        stage,
         // Don't overwrite other fields, just update annotations
         _annotationOnly: true
       });
@@ -519,6 +527,8 @@ class GoogleSheetsService {
         status: row[15] || 'Active',
         comments: row[16] || '',
         notes: row[17] || '',
+        associateInCharge: row[18] || '',
+        stage: row[19] || '',
         tags: [],
         aiTags: []
       }));

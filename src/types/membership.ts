@@ -12,6 +12,8 @@ export interface MembershipData {
   itemId: string; // Now called "Id" in sheet
   orderDate: string; // Now called "Order At" in sheet
   soldBy: string;
+  associateInCharge?: string; // Second associate field
+  stage?: string; // Member interaction stage
   membershipId: string;
   frozen: string;
   paid: string;
@@ -109,6 +111,37 @@ export interface FilterOptions {
     max: number;
   };
 }
+
+// Member interaction stages
+export const MEMBER_STAGES = [
+  "Cost Too High",
+  "Moved to a Different City",
+  "Schedule Not Matching Class Timings",
+  "Lack of Visible Results",
+  "Found a Cheaper Alternative",
+  "Prefers Home Workouts Now",
+  "Lack of Motivation to Continue",
+  "Injury or Health Issues",
+  "Pregnancy or Postpartum",
+  "Travel or Relocation for Work",
+  "Prefers Gym Over Boutique Classes",
+  "Wants More Variety of Workout Formats",
+  "Feels Classes Are Repetitive",
+  "Did Not Feel Connected With Instructors",
+  "Lack of Personalized Attention",
+  "Classes Too Crowded",
+  "Didn't Like Studio Environment or Vibe",
+  "Limited Class Availability",
+  "Difficulty Booking Favorite Time Slots",
+  "No Accountability Outside Classes",
+  "Felt Progress Plateaued",
+  "Prefers Outdoor or Independent Workouts",
+  "Opted for Online Fitness Platforms",
+  "Change in Lifestyle or Priorities",
+  "Dissatisfied With Customer Service"
+] as const;
+
+export type MemberStage = typeof MEMBER_STAGES[number];
 
 export interface FilterState {
   search: string;

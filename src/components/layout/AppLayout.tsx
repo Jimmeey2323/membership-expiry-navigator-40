@@ -1,93 +1,30 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { GlobalFilterPanel } from '@/components/GlobalFilterPanel';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   Users,
-  BarChart3,
-  Settings,
-  Menu,
   X,
-  Home,
-  Activity,
-  TrendingUp,
-  FileText,
   Bell,
   Search,
-  Plus,
-  Download,
-  Upload,
-  RefreshCw,
   ChevronRight,
-  Building2,
-  Calendar,
-  Crown,
-  Sparkles
+  Sparkles,
+  Filter
 } from 'lucide-react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
+  filterData?: any[];
+  showFilterSidebar?: boolean;
 }
 
-export const AppLayout = ({ children }: AppLayoutProps) => {
+export const AppLayout = ({ children, filterData, showFilterSidebar = false }: AppLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true); // Collapsed by default
   const location = useLocation();
 
-  const navigation = [
-    {
-      name: 'Dashboard',
-      href: '/',
-      icon: Home,
-      current: location.pathname === '/',
-      badge: null
-    },
-    {
-      name: 'Members',
-      href: '/',
-      icon: Users,
-      current: location.pathname === '/members',
-      badge: { text: '2,845', variant: 'secondary' as const }
-    },
-    {
-      name: 'Analytics',
-      href: '/churn-analytics',
-      icon: BarChart3,
-      current: location.pathname === '/churn-analytics',
-      badge: { text: 'Live', variant: 'default' as const }
-    },
-    {
-      name: 'Reports',
-      href: '/reports',
-      icon: FileText,
-      current: location.pathname === '/reports',
-      badge: null
-    },
-    {
-      name: 'Settings',
-      href: '/settings',
-      icon: Settings,
-      current: location.pathname === '/settings',
-      badge: null
-    }
-  ];
 
-  const quickActions = [
-    { name: 'Add Member', icon: Plus, action: () => {} },
-    { name: 'Export', icon: Download, action: () => {} },
-    { name: 'Import', icon: Upload, action: () => {} },
-    { name: 'Refresh', icon: RefreshCw, action: () => {} }
-  ];
-
-  const stats = [
-    { name: 'Active Members', value: '2,845', icon: Users },
-    { name: 'Pending Renewals', value: '127', icon: Calendar },
-    { name: 'Revenue Today', value: '$12.4k', icon: TrendingUp },
-    { name: 'Churn Risk', value: '8.2%', icon: Activity }
-  ];
 
   return (
     <div className="flex h-screen bg-white flex-col">
@@ -95,25 +32,31 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
       <header className="bg-white/95 backdrop-blur-xl border-b border-white/30 shadow-lg z-50">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center space-x-4">
-            {/* Toggle Sidebar Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="hidden lg:flex text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
+            {/* Toggle Filter Sidebar Button */}
+            {showFilterSidebar && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="hidden lg:flex text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                title={sidebarCollapsed ? "Show Filters" : "Hide Filters"}
+              >
+                <Filter className="h-5 w-5" />
+              </Button>
+            )}
             
-            {/* Mobile Sidebar Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
+            {/* Mobile Filter Sidebar Button */}
+            {showFilterSidebar && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                title="Show Filters"
+              >
+                <Filter className="h-5 w-5" />
+              </Button>
+            )}
             
             {/* Logo and Title */}
             <div className="flex items-center space-x-3">
@@ -189,144 +132,84 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
           />
         )}
 
-        {/* Sidebar */}
-        <div className={`
-          fixed inset-y-0 left-0 z-50 bg-white shadow-xl border-r border-gray-200 lg:relative lg:translate-x-0
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          ${sidebarCollapsed ? 'w-16 lg:w-16' : 'w-72 lg:w-72'}
-          transition-all duration-300 ease-in-out lg:flex lg:flex-shrink-0
-          top-20 lg:top-20
-        `}>
-          <div className="flex flex-col h-full">
-            {/* Close button for mobile */}
-            {sidebarOpen && (
-              <div className="flex justify-end p-4 lg:hidden">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSidebarOpen(false)}
-                  className="text-gray-600 hover:text-gray-900"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-            )}
-
-            {/* Quick Stats */}
-            {!sidebarCollapsed && (
-              <div className="p-4 border-b border-gray-200 bg-gray-50">
-                <div className="grid grid-cols-2 gap-3">
-                  {stats.map((stat) => (
-                    <Card key={stat.name} className="p-3 bg-gradient-to-r from-gray-800 to-gray-700 border-gray-600 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="flex items-center space-x-2">
-                        <stat.icon className="h-4 w-4 text-white" />
-                        <div>
-                          <p className="text-xs text-white opacity-80">{stat.name}</p>
-                          <p className="text-sm font-semibold text-white">{stat.value}</p>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Navigation */}
-            <nav className="flex-1 p-4 space-y-2 bg-white">
-              {!sidebarCollapsed && (
-                <div className="mb-4">
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                    Navigation
-                  </h3>
+        {/* Filter Sidebar */}
+        {showFilterSidebar && filterData && (
+          <div className={`
+            fixed inset-y-0 left-0 z-50 bg-slate-50/95 backdrop-blur-sm shadow-2xl border-r border-slate-200 lg:relative lg:translate-x-0
+            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+            ${sidebarCollapsed ? 'w-16 lg:w-16' : 'w-80 lg:w-80'}
+            transition-all duration-300 ease-in-out lg:flex lg:flex-shrink-0
+            h-[calc(100vh-5rem)] lg:h-[calc(100vh-5rem)] mt-20 lg:mt-20
+          `}>
+            <div className="flex flex-col h-full bg-white rounded-tr-xl border border-slate-200 shadow-inner">
+              {/* Close button for mobile */}
+              {sidebarOpen && (
+                <div className="flex justify-end p-4 lg:hidden">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSidebarOpen(false)}
+                    className="text-gray-600 hover:text-gray-900"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
                 </div>
               )}
-              <div className={sidebarCollapsed ? 'space-y-2' : ''}>
-                {navigation.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.name}
-                      to={item.href}
-                      onClick={() => setSidebarOpen(false)}
-                      title={sidebarCollapsed ? item.name : ''}
-                      className={`
-                        flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-300
-                        ${sidebarCollapsed ? 'justify-center' : 'justify-between'}
-                        ${item.current 
-                          ? 'bg-gradient-to-r from-gray-800 to-gray-700 text-white shadow-lg' 
-                          : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                        }
-                      `}
+
+              {/* Filter Panel Content */}
+              <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
+                {!sidebarCollapsed ? (
+                  <div className="p-4 h-full">
+                    <GlobalFilterPanel data={filterData} className="h-full" />
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full px-2 py-4">
+                    <Button
+                      variant="ghost"
+                      size="lg"
+                      onClick={() => setSidebarCollapsed(false)}
+                      className="w-12 h-12 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 hover:text-indigo-700 shadow-sm border border-indigo-200"
+                      title="Expand Filters"
                     >
-                      <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                        <Icon className={`h-5 w-5 ${item.current ? 'text-white' : 'text-gray-500'}`} />
-                        {!sidebarCollapsed && <span>{item.name}</span>}
-                      </div>
-                      {!sidebarCollapsed && item.badge && (
-                        <Badge variant={item.badge.variant} className={`text-xs ${item.current ? 'bg-white/20 text-white border-white/30' : 'bg-gray-200 text-gray-700'}`}>
-                          {item.badge.text}
-                        </Badge>
-                      )}
-                    </Link>
-                  );
-                })}
+                      <Filter className="h-5 w-5" />
+                    </Button>
+                    <p className="text-xs text-slate-500 mt-2 text-center font-medium">Filters</p>
+                  </div>
+                )}
               </div>
 
-              {!sidebarCollapsed && <Separator className="bg-gray-200" />}
-
-              {/* Quick Actions */}
-              {!sidebarCollapsed && (
-                <div className="mt-4">
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                    Quick Actions
-                  </h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {quickActions.map((action) => {
-                      const Icon = action.icon;
-                      return (
-                        <Button
-                          key={action.name}
-                          variant="outline"
-                          size="sm"
-                          onClick={action.action}
-                          className="flex flex-col items-center gap-1 h-auto py-3 bg-white hover:bg-gray-50 text-gray-700 hover:text-gray-900 border-gray-300 hover:border-gray-400"
-                        >
-                          <Icon className="h-4 w-4" />
-                          <span className="text-xs">{action.name}</span>
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </nav>
-
-            {/* Footer */}
-            <div className="p-4 border-t border-gray-200 bg-gray-50">
-              {!sidebarCollapsed ? (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center">
-                      <Crown className="h-4 w-4 text-white" />
-                    </div>
+              {/* Footer */}
+              <div className={`border-t border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100 ${
+                sidebarCollapsed ? 'p-2' : 'p-4'
+              }`}>
+                {!sidebarCollapsed ? (
+                  <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Premium Plan</p>
-                      <p className="text-xs text-gray-600">All features unlocked</p>
+                      <p className="text-sm font-semibold text-slate-800">Smart Filters</p>
+                      <p className="text-xs text-slate-600">Advanced data refinement</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ThemeToggle />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSidebarCollapsed(true)}
+                        className="h-8 w-8 p-0 hover:bg-slate-200 text-slate-500 hover:text-slate-700"
+                        title="Collapse Sidebar"
+                      >
+                        <ChevronRight className="h-4 w-4 transform rotate-180" />
+                      </Button>
                     </div>
                   </div>
-                  <ThemeToggle />
-                </div>
-              ) : (
-                <div className="flex flex-col items-center space-y-2">
-                  <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center">
-                    <Crown className="h-4 w-4 text-white" />
+                ) : (
+                  <div className="flex flex-col items-center space-y-2">
+                    <ThemeToggle />
                   </div>
-                  <ThemeToggle />
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Main content */}
         <main className="flex-1 p-6 bg-white overflow-auto">

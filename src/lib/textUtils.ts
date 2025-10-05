@@ -30,6 +30,26 @@ export const toSentenceCase = (text: string): string => {
 };
 
 /**
+ * Extract first name from email address or full name
+ */
+export const extractFirstName = (nameOrEmail: string): string => {
+  if (!nameOrEmail || typeof nameOrEmail !== 'string') return '';
+  
+  // If it contains @, it's an email - extract part before @
+  if (nameOrEmail.includes('@')) {
+    const emailPrefix = nameOrEmail.split('@')[0];
+    // Handle common email patterns like firstname.lastname or firstname_lastname
+    const namePart = emailPrefix.replace(/[._-]/g, ' ').trim();
+    const parts = namePart.split(' ');
+    return toSentenceCase(parts[0]);
+  }
+  
+  // If it's already a name, extract first part
+  const nameParts = nameOrEmail.trim().split(' ');
+  return toSentenceCase(nameParts[0]);
+};
+
+/**
  * Split text into sentences and return as array
  */
 export const splitIntoSentences = (text: string): string[] => {
