@@ -83,6 +83,15 @@ const STAFF_NAMES = [
   "Zahur Shaikh"
 ].filter(name => name && name.trim() !== ''); // Filter out any empty values
 
+// Safe SelectItem wrapper to prevent empty value errors
+const SafeSelectItem = ({ value, children, ...props }: { value: string; children: React.ReactNode; [key: string]: any }) => {
+  if (!value || value.trim() === '') {
+    console.warn('Attempted to create SelectItem with empty value:', value);
+    return null;
+  }
+  return <SelectItem value={value} {...props}>{children}</SelectItem>;
+};
+
 export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDetailModalProps) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [notes, setNotes] = useState<Comment[]>([]);
@@ -1116,12 +1125,12 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                         </SelectTrigger>
                         <SelectContent>
                           {STAFF_NAMES.map((name) => (
-                            <SelectItem key={name} value={name}>
+                            <SafeSelectItem key={name} value={name}>
                               <div className="flex items-center gap-2">
                                 <UserCircle className="h-4 w-4" />
                                 {name}
                               </div>
-                            </SelectItem>
+                            </SafeSelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -1142,16 +1151,16 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                           <SelectValue placeholder="Select stage based on recent interactions..." />
                         </SelectTrigger>
                         <SelectContent className="max-h-60">
-                          <SelectItem value="NONE">
+                          <SafeSelectItem value="NONE">
                             <div className="flex items-center gap-2 text-gray-500">
                               <X className="h-4 w-4" />
                               No Stage
                             </div>
-                          </SelectItem>
+                          </SafeSelectItem>
                           {MEMBER_STAGES.filter(stage => stage && stage.trim() !== '').map((stage) => (
-                            <SelectItem key={stage} value={stage}>
+                            <SafeSelectItem key={stage} value={stage}>
                               {stage}
-                            </SelectItem>
+                            </SafeSelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -1199,12 +1208,12 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                                     </SelectTrigger>
                                     <SelectContent>
                                       {STAFF_NAMES.map((name) => (
-                                        <SelectItem key={name} value={name}>
+                                        <SafeSelectItem key={name} value={name}>
                                           <div className="flex items-center gap-2">
                                             <UserCircle className="h-4 w-4" />
                                             {name}
                                           </div>
-                                        </SelectItem>
+                                        </SafeSelectItem>
                                       ))}
                                     </SelectContent>
                                   </Select>
@@ -1304,12 +1313,12 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                         </SelectTrigger>
                         <SelectContent>
                           {STAFF_NAMES.map((name) => (
-                            <SelectItem key={name} value={name}>
+                            <SafeSelectItem key={name} value={name}>
                               <div className="flex items-center gap-2">
                                 <UserCircle className="h-4 w-4" />
                                 {name}
                               </div>
-                            </SelectItem>
+                            </SafeSelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -1343,12 +1352,12 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                                     </SelectTrigger>
                                     <SelectContent>
                                       {STAFF_NAMES.map((name) => (
-                                        <SelectItem key={name} value={name}>
+                                        <SafeSelectItem key={name} value={name}>
                                           <div className="flex items-center gap-2">
                                             <UserCircle className="h-4 w-4" />
                                             {name}
                                           </div>
-                                        </SelectItem>
+                                        </SafeSelectItem>
                                       ))}
                                     </SelectContent>
                                   </Select>
@@ -1448,12 +1457,12 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                         </SelectTrigger>
                         <SelectContent>
                           {STAFF_NAMES.map((name) => (
-                            <SelectItem key={name} value={name}>
+                            <SafeSelectItem key={name} value={name}>
                               <div className="flex items-center gap-2">
                                 <UserCircle className="h-4 w-4" />
                                 {name}
                               </div>
-                            </SelectItem>
+                            </SafeSelectItem>
                           ))}
                         </SelectContent>
                       </Select>
