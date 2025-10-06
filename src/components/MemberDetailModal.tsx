@@ -23,11 +23,22 @@ import { cleanText, toSentenceCase } from "@/lib/textUtils";
 
 // Utility function to safely extract text from structured comments/notes
 const extractStructuredText = (legacyText: string | undefined, structuredArray: any[] | undefined): string => {
-  if (legacyText) return legacyText;
-  if (Array.isArray(structuredArray)) {
-    return structuredArray.map(item => item.text || item).join('\n');
+  try {
+    if (legacyText && typeof legacyText === 'string') return legacyText;
+    if (Array.isArray(structuredArray)) {
+      return structuredArray.map(item => {
+        if (typeof item === 'string') return item;
+        if (typeof item === 'object' && item !== null) {
+          return item.text || String(item);
+        }
+        return String(item);
+      }).join('\n');
+    }
+    return '';
+  } catch (error) {
+    console.error('Error extracting structured text:', error);
+    return '';
   }
-  return '';
 };
 
 interface MemberDetailModalProps {
@@ -143,13 +154,17 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
           const match = line.match(/\[Created by: (.+?) at (.+?)\]/);
           if (match) {
             createdBy = match[1];
-            timestamp = new Date(match[2]);
+            const dateString = match[2];
+            const parsedDate = new Date(dateString);
+            timestamp = !isNaN(parsedDate.getTime()) ? parsedDate : new Date();
           }
         } else if (line.startsWith('[Last edited by:')) {
           const match = line.match(/\[Last edited by: (.+?) at (.+?)\]/);
           if (match) {
             lastEditedBy = match[1];
-            lastEditedAt = new Date(match[2]);
+            const dateString = match[2];
+            const parsedDate = new Date(dateString);
+            lastEditedAt = !isNaN(parsedDate.getTime()) ? parsedDate : undefined;
           }
         } else if (!line.startsWith('[')) {
           actualText += (actualText ? '\n' : '') + line;
@@ -185,13 +200,17 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
           const match = line.match(/\[Created by: (.+?) at (.+?)\]/);
           if (match) {
             createdBy = match[1];
-            timestamp = new Date(match[2]);
+            const dateString = match[2];
+            const parsedDate = new Date(dateString);
+            timestamp = !isNaN(parsedDate.getTime()) ? parsedDate : new Date();
           }
         } else if (line.startsWith('[Last edited by:')) {
           const match = line.match(/\[Last edited by: (.+?) at (.+?)\]/);
           if (match) {
             lastEditedBy = match[1];
-            lastEditedAt = new Date(match[2]);
+            const dateString = match[2];
+            const parsedDate = new Date(dateString);
+            lastEditedAt = !isNaN(parsedDate.getTime()) ? parsedDate : undefined;
           }
         } else if (!line.startsWith('[')) {
           actualText += (actualText ? '\n' : '') + line;
@@ -212,31 +231,47 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
 
   // Update state when member changes
   useEffect(() => {
-    if (member) {
-      // Initialize stage from member data
-      setCurrentStage(member.stage || '');
-      
-      // Handle both legacy string format and new structured format
-      const commentsText = extractStructuredText(member.commentsText, member.comments);
-      const notesText = extractStructuredText(member.notesText, member.notes);
-      
-      const parsedComments = parseComments(commentsText);
-      const parsedNotes = parseNotes(notesText);
-      
-      // Parse tags into TagEntry format - handle both string and structured tags
-      const parsedTags: TagEntry[] = (member.tagsText || member.tags || []).map(tag => ({
-        tag: typeof tag === 'string' ? tag : (tag as any)?.text || String(tag),
-        createdBy: typeof tag === 'object' ? (tag as any)?.createdBy || 'Unknown' : 'Unknown',
-        timestamp: typeof tag === 'object' ? new Date((tag as any)?.createdAt || Date.now()) : new Date()
-      }));
-      
-      setComments(parsedComments);
-      setNotes(parsedNotes);
-      setTags(parsedTags);
-    } else {
+    try {
+      if (member) {
+        // Initialize stage from member data
+        setCurrentStage(member.stage || '');
+        
+        // Handle both legacy string format and new structured format
+        const commentsText = extractStructuredText(member.commentsText, member.comments);
+        const notesText = extractStructuredText(member.notesText, member.notes);
+        
+        const parsedComments = parseComments(commentsText);
+        const parsedNotes = parseNotes(notesText);
+        
+        // Parse tags into TagEntry format - handle both string and structured tags
+        const parsedTags: TagEntry[] = (member.tagsText || member.tags || []).map(tag => {
+          let tagTimestamp = new Date();
+          if (typeof tag === 'object' && (tag as any)?.createdAt) {
+            const parsedTagDate = new Date((tag as any).createdAt);
+            tagTimestamp = !isNaN(parsedTagDate.getTime()) ? parsedTagDate : new Date();
+          }
+          return {
+            tag: typeof tag === 'string' ? tag : (tag as any)?.text || String(tag),
+            createdBy: typeof tag === 'object' ? (tag as any)?.createdBy || 'Unknown' : 'Unknown',
+            timestamp: tagTimestamp
+          };
+        });
+        
+        setComments(parsedComments);
+        setNotes(parsedNotes);
+        setTags(parsedTags);
+      } else {
+        setComments([]);
+        setNotes([]);
+        setTags([]);
+      }
+    } catch (error) {
+      console.error('Error parsing member data:', error);
+      // Set safe default values
       setComments([]);
       setNotes([]);
       setTags([]);
+      setCurrentStage('');
     }
   }, [member, member?.lastUpdated]);
 
@@ -838,7 +873,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                                 <UserCircle className="h-3 w-3" />
                                 <span>{note.createdBy || 'Unknown'}</span>
                                 <span>•</span>
-                                <span>{note.timestamp.toLocaleString()}</span>
+                                <span>{note.timestamp && !isNaN(note.timestamp.getTime()) ? note.timestamp.toLocaleString() : 'Unknown date'}</span>
                                 {note.lastEditedBy && (
                                   <>
                                     <span>•</span>
@@ -887,7 +922,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                                 <UserCircle className="h-3 w-3" />
                                 <span>{comment.createdBy || 'Unknown'}</span>
                                 <span>•</span>
-                                <span>{comment.timestamp.toLocaleString()}</span>
+                                <span>{comment.timestamp && !isNaN(comment.timestamp.getTime()) ? comment.timestamp.toLocaleString() : 'Unknown date'}</span>
                                 {comment.lastEditedBy && (
                                   <>
                                     <span>•</span>
@@ -1204,14 +1239,14 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                                     <UserCircle className="h-4 w-4" />
                                     <span>Created by: {comment.createdBy || 'Unknown'}</span>
                                     <span>•</span>
-                                    <span>{comment.timestamp.toLocaleString()}</span>
+                                    <span>{comment.timestamp && !isNaN(comment.timestamp.getTime()) ? comment.timestamp.toLocaleString() : 'Unknown date'}</span>
                                   </div>
                                   {comment.lastEditedBy && (
                                     <div className="flex items-center gap-2 text-xs text-slate-400">
                                       <Edit2 className="h-3 w-3" />
                                       <span>Last edited by: {comment.lastEditedBy}</span>
                                       <span>•</span>
-                                      <span>{comment.lastEditedAt?.toLocaleString()}</span>
+                                      <span>{comment.lastEditedAt && !isNaN(comment.lastEditedAt.getTime()) ? comment.lastEditedAt.toLocaleString() : 'Unknown date'}</span>
                                     </div>
                                   )}
                                 </div>
@@ -1348,14 +1383,14 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                                     <UserCircle className="h-4 w-4" />
                                     <span>Created by: {note.createdBy || 'Unknown'}</span>
                                     <span>•</span>
-                                    <span>{note.timestamp.toLocaleString()}</span>
+                                    <span>{note.timestamp && !isNaN(note.timestamp.getTime()) ? note.timestamp.toLocaleString() : 'Unknown date'}</span>
                                   </div>
                                   {note.lastEditedBy && (
                                     <div className="flex items-center gap-2 text-xs text-slate-400">
                                       <Edit2 className="h-3 w-3" />
                                       <span>Last edited by: {note.lastEditedBy}</span>
                                       <span>•</span>
-                                      <span>{note.lastEditedAt?.toLocaleString()}</span>
+                                      <span>{note.lastEditedAt && !isNaN(note.lastEditedAt.getTime()) ? note.lastEditedAt.toLocaleString() : 'Unknown date'}</span>
                                     </div>
                                   )}
                                 </div>
@@ -1463,7 +1498,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                                 <UserCircle className="h-3 w-3" />
                                 <span>Added by: {tagEntry.createdBy}</span>
                                 <span>•</span>
-                                <span>{tagEntry.timestamp.toLocaleString()}</span>
+                                <span>{tagEntry.timestamp && !isNaN(tagEntry.timestamp.getTime()) ? tagEntry.timestamp.toLocaleString() : 'Unknown date'}</span>
                               </div>
                             </div>
                             <button
