@@ -14,7 +14,7 @@ import {
   X, Plus, Save, User, Mail, Calendar, MapPin, 
   Activity, CreditCard, MessageSquare, FileText, 
   Tag, Clock, TrendingUp, AlertCircle, Star,
-  Phone, Building, Users, Edit2, Check, UserCircle, Brain
+  Phone, Building, Users, Edit2, Check, UserCircle, Brain, UserCheck
 } from "lucide-react";
 import { MembershipData, MEMBER_STAGES } from "@/types/membership";
 import { googleSheetsService } from "@/services/googleSheets";
@@ -85,6 +85,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
   const [editText, setEditText] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [currentStage, setCurrentStage] = useState(member?.stage || '');
 
   // Helper functions for AI analysis styling
   const getSentimentBadgeClass = (sentiment: string): string => {
@@ -212,6 +213,9 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
   // Update state when member changes
   useEffect(() => {
     if (member) {
+      // Initialize stage from member data
+      setCurrentStage(member.stage || '');
+      
       // Handle both legacy string format and new structured format
       const commentsText = extractStructuredText(member.commentsText, member.comments);
       const notesText = extractStructuredText(member.notesText, member.notes);
@@ -378,10 +382,12 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
         allComments,
         allNotes,
         tagsForSaving,
-        member.uniqueId // Add unique ID for better persistence
+        latestAssociate,
+        member.associateInCharge,
+        currentStage // Use the current stage state
       );
       
-      onSave(member.memberId, allComments, allNotes, tagsForSaving, latestAssociate, member.associateInCharge, member.stage);
+      onSave(member.memberId, allComments, allNotes, tagsForSaving, latestAssociate, member.associateInCharge, currentStage);
       toast.success("Member details saved successfully!");
       onClose();
     } catch (error) {
@@ -880,9 +886,10 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                     
                     <div>
                       <Label htmlFor="member-stage">Member Interaction Stage</Label>
-                      <Select value={member.stage || ''} onValueChange={(value) => {
+                      <Select value={currentStage} onValueChange={(value) => {
+                        setCurrentStage(value);
                         if (member) {
-                          member.stage = value;
+                          member.stage = value; // Also update the member object
                         }
                       }}>
                         <SelectTrigger className="w-full">
@@ -896,6 +903,12 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                           ))}
                         </SelectContent>
                       </Select>
+                      {currentStage && (
+                        <div className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                          <UserCheck className="h-3 w-3" />
+                          Current stage: {currentStage}
+                        </div>
+                      )}
                     </div>
                     
                     <Textarea

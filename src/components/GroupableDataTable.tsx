@@ -384,7 +384,7 @@ export const GroupableDataTable = ({
     setIsDetailModalOpen(true);
   };
 
-    const handleAnnotationSave = (memberId: string, comments: string, notes: string, tags: string[], associate?: string) => {
+    const handleAnnotationSave = (memberId: string, comments: string, notes: string, tags: string[], associate?: string, associateInCharge?: string, stage?: string) => {
     if (onAnnotationUpdate) {
       onAnnotationUpdate(memberId, comments, notes, tags, associate);
     }
