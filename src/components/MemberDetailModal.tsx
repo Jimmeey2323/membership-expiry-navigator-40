@@ -1129,10 +1129,11 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                     
                     <div>
                       <Label htmlFor="member-stage">Member Interaction Stage</Label>
-                      <Select value={currentStage} onValueChange={(value) => {
-                        setCurrentStage(value);
+                      <Select value={currentStage || 'NONE'} onValueChange={(value) => {
+                        const actualValue = value === 'NONE' ? '' : value;
+                        setCurrentStage(actualValue);
                         if (member) {
-                          member.stage = value; // Also update the member object
+                          member.stage = actualValue; // Also update the member object
                         }
                         // Auto-save after stage change
                         setTimeout(() => handleAutoSave(), 100);
@@ -1141,7 +1142,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                           <SelectValue placeholder="Select stage based on recent interactions..." />
                         </SelectTrigger>
                         <SelectContent className="max-h-60">
-                          <SelectItem value="">
+                          <SelectItem value="NONE">
                             <div className="flex items-center gap-2 text-gray-500">
                               <X className="h-4 w-4" />
                               No Stage
