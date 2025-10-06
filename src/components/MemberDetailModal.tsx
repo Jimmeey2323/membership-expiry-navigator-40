@@ -81,7 +81,7 @@ const STAFF_NAMES = [
   "Vahishta Fitter",
   "Zaheer Agarbattiwala",
   "Zahur Shaikh"
-];
+].filter(name => name && name.trim() !== ''); // Filter out any empty values
 
 export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDetailModalProps) => {
   const [comments, setComments] = useState<Comment[]>([]);
@@ -1148,7 +1148,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                               No Stage
                             </div>
                           </SelectItem>
-                          {MEMBER_STAGES.map((stage) => (
+                          {MEMBER_STAGES.filter(stage => stage && stage.trim() !== '').map((stage) => (
                             <SelectItem key={stage} value={stage}>
                               {stage}
                             </SelectItem>
