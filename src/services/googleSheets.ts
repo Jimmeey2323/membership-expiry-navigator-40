@@ -268,7 +268,7 @@ class GoogleSheetsService {
       // If this is an annotation-only update, preserve all other data
       const updatedRow = member._annotationOnly ? [
         rows[memberIndex][0] || '', // Preserve existing uniqueId
-        rows[memberIndex][1] || '', // Preserve existing memberId  
+        rows[memberIndex][1] || '', // Preserve existing memberId
         rows[memberIndex][2] || '', // Preserve existing firstName
         rows[memberIndex][3] || '', // Preserve existing lastName
         rows[memberIndex][4] || '', // Preserve existing email
@@ -283,10 +283,11 @@ class GoogleSheetsService {
         rows[memberIndex][13] || '', // Preserve existing frozen
         rows[memberIndex][14] || '', // Preserve existing paid
         rows[memberIndex][15] || 'Active', // Preserve existing status
-        member.notesText || member.notes || rows[memberIndex][16] || '', // Update notes (column 16)
-        member.commentsText || member.comments || rows[memberIndex][17] || '', // Update comments (column 17)
-        member.associateInCharge || rows[memberIndex][18] || '', // Update associate in charge
-        member.stage || rows[memberIndex][19] || '' // Update stage
+        // CRITICAL: Use explicit checks to allow empty strings (deletions)
+        member.notesText !== undefined ? member.notesText : (member.notes !== undefined ? member.notes : rows[memberIndex][16] || ''), // Update notes (column 16)
+        member.commentsText !== undefined ? member.commentsText : (member.comments !== undefined ? member.comments : rows[memberIndex][17] || ''), // Update comments (column 17)
+        member.associateInCharge !== undefined ? member.associateInCharge : rows[memberIndex][18] || '', // Update associate in charge
+        member.stage !== undefined ? member.stage : rows[memberIndex][19] || '' // Update stage
       ] : [
         member.uniqueId || rows[memberIndex][0] || '',
         member.memberId || rows[memberIndex][1] || '',
@@ -521,19 +522,29 @@ class GoogleSheetsService {
     try {
       // Format timestamp in IST (DD-MM-YYYY, HH:MM:SS format)
       const istTimestamp = this.formatDateTimeIST(customTimestamp ? new Date(customTimestamp) : new Date());
-      
-      // Save to Member_Annotations sheet first
+
+      // CRITICAL: Update main sheet FIRST - it's the single source of truth
+      await this.updateSingleMember({
+        memberId,
+        commentsText: comments || '',  // Use correct field names - empty string for deletions
+        notesText: notes || '',        // Use correct field names - empty string for deletions
+        associateInCharge: associateInCharge || '',
+        stage: stage || '',
+        _annotationOnly: true
+      });
+
+      // Then update Member_Annotations sheet for backup/history
       const annotationsData = await this.fetchAnnotations();
-      
-      const existingIndex = annotationsData.findIndex((row, index) => 
+
+      const existingIndex = annotationsData.findIndex((row, index) =>
         index > 0 && row[0] === memberId
       );
-      
+
       // Check if this is a deletion (all content empty)
-      const isCompletelyEmpty = (!comments || comments.trim() === '') && 
-                                (!notes || notes.trim() === '') && 
+      const isCompletelyEmpty = (!comments || comments.trim() === '') &&
+                                (!notes || notes.trim() === '') &&
                                 (!tags || tags.length === 0);
-      
+
       if (isCompletelyEmpty && existingIndex !== -1) {
         // Remove the annotation row completely for deletions
         annotationsData.splice(existingIndex, 1);
@@ -549,27 +560,16 @@ class GoogleSheetsService {
           associateName || '',
           istTimestamp
         ];
-        
+
         if (existingIndex !== -1) {
           annotationsData[existingIndex] = newRow;
         } else {
           annotationsData.push(newRow);
         }
       }
-      
+
       await this.updateAnnotations(annotationsData);
-      
-      // Also update the main Expirations sheet to keep both in sync
-      await this.updateSingleMember({
-        memberId,
-        commentsText: comments,  // Use correct field names
-        notesText: notes,        // Use correct field names
-        associateInCharge,
-        stage,
-        // Don't overwrite other fields, just update annotations
-        _annotationOnly: true
-      });
-      
+
     } catch (error) {
       console.error('Error saving annotation:', error);
       throw error;
@@ -643,46 +643,9 @@ class GoogleSheetsService {
         aiTags: []
       }));
       
-      // Fetch and merge annotation data
-      try {
-        const annotationsData = await this.fetchAnnotations();
-        const [annotationHeaders, ...annotationRows] = annotationsData;
-        
-        for (const annotationRow of annotationRows) {
-          // Correct column mapping: ['Member ID', 'Email', 'Comments', 'Notes', 'Tags', 'Unique ID', 'Associate Name', 'Timestamp']
-          const [memberId, email, comments, notes, tags, uniqueId, associateName, timestamp] = annotationRow;
-          
-          const member = membershipData.find(m => m.memberId === memberId || m.email === email);
-          
-          if (member) {
-            // ALWAYS prioritize main sheet data - only use annotation data if main sheet is completely empty
-            // This prevents deleted items from reappearing
-            
-            // For comments: only use annotation if main sheet has NO comments at all
-            if (!member.commentsText && comments && comments.trim()) {
-              member.commentsText = comments;
-            }
-            
-            // For notes: only use annotation if main sheet has NO notes at all
-            if (!member.notesText && notes && notes.trim()) {
-              member.notesText = notes;
-            }
-            
-            // For tags: only use annotation if main sheet has NO tags at all
-            if ((!member.tagsText || member.tagsText.length === 0) && tags && tags.trim()) {
-              const tagArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-              member.tagsText = tagArray;
-            }
-            
-            // For associate: only use annotation if main sheet has NO associate data
-            if (!member.associateInCharge && associateName && associateName.trim()) {
-              member.associateInCharge = associateName;
-            }
-          }
-        }
-      } catch (error) {
-        // Annotation fetch failed - continue without annotations
-      }
+      // Note: We no longer merge annotation data back during fetch
+      // The main sheet is the single source of truth
+      // Annotations sheet is only used for backup/history purposes
       
       // Auto-repair corrupted data
       const corruptedRecords = membershipData.filter(m => 
