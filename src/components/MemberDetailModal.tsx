@@ -213,12 +213,20 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
   // Update state when member changes
   useEffect(() => {
     if (member) {
+      console.log('🔄 MemberDetailModal loading data for member:', member.memberId);
+      console.log('🔄 Member stage:', member.stage);
+      console.log('🔄 Member commentsText:', member.commentsText);
+      console.log('🔄 Member structured comments:', member.comments);
+      
       // Initialize stage from member data
       setCurrentStage(member.stage || '');
       
       // Handle both legacy string format and new structured format
       const commentsText = extractStructuredText(member.commentsText, member.comments);
       const notesText = extractStructuredText(member.notesText, member.notes);
+      
+      console.log('🔄 Extracted commentsText:', commentsText);
+      console.log('🔄 Extracted notesText:', notesText);
       
       const parsedComments = parseComments(commentsText);
       const parsedNotes = parseNotes(notesText);
@@ -432,12 +440,15 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
   };
 
   const removeComment = async (id: string) => {
+    console.log('🗑️ Removing comment with ID:', id);
     const updatedComments = comments.filter(c => c.id !== id);
+    console.log('📝 Comments after deletion:', updatedComments.length, 'remaining');
     setComments(updatedComments);
     
     // Immediately update the member object to prevent stale data on reload
     if (member) {
       const updatedCommentsText = updatedComments.map(c => formatCommentWithMetadata(c)).join('\n---\n');
+      console.log('💾 Updated comments text to save:', updatedCommentsText);
       member.commentsText = updatedCommentsText;
       // Clear structured comments to avoid conflicts
       member.comments = undefined;
@@ -536,6 +547,11 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
   // Auto-save function for immediate updates when items are deleted/edited
   const handleAutoSave = async () => {
     if (!member) return;
+    
+    console.log('💾 handleAutoSave triggered for member:', member.memberId);
+    console.log('💾 Current comments count:', comments.length);
+    console.log('💾 Current notes count:', notes.length);
+    console.log('💾 Current stage:', currentStage);
     
     try {
       // Include associate metadata in saved format for proper parsing
@@ -1093,8 +1109,11 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                     <div>
                       <Label htmlFor="member-stage">Member Interaction Stage</Label>
                       <Select value={currentStage} onValueChange={(value) => {
+                        console.log('🎯 Stage dropdown - Selected value:', value);
+                        console.log('🎯 Stage dropdown - Current stage before:', currentStage);
                         setCurrentStage(value);
                         if (member) {
+                          console.log('🎯 Stage dropdown - Updating member.stage to:', value);
                           member.stage = value; // Also update the member object
                         }
                         // Auto-save after stage change
