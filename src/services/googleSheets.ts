@@ -283,8 +283,8 @@ class GoogleSheetsService {
         rows[memberIndex][13] || '', // Preserve existing frozen
         rows[memberIndex][14] || '', // Preserve existing paid
         rows[memberIndex][15] || 'Active', // Preserve existing status
-        member.notes || rows[memberIndex][16] || '', // Update notes (column 16)
-        member.comments || rows[memberIndex][17] || '', // Update comments (column 17)
+        member.notesText || member.notes || rows[memberIndex][16] || '', // Update notes (column 16)
+        member.commentsText || member.comments || rows[memberIndex][17] || '', // Update comments (column 17)
         member.associateInCharge || rows[memberIndex][18] || '', // Update associate in charge
         member.stage || rows[memberIndex][19] || '' // Update stage
       ] : [
@@ -306,8 +306,8 @@ class GoogleSheetsService {
         member.frozen || rows[memberIndex][13] || '',
         member.paid || rows[memberIndex][14] || '',
         member.status || rows[memberIndex][15] || 'Active',
-        member.notes || rows[memberIndex][16] || '', // Notes in column 16
-        member.comments || rows[memberIndex][17] || '', // Comments in column 17
+        member.notesText || member.notes || rows[memberIndex][16] || '', // Notes in column 16
+        member.commentsText || member.comments || rows[memberIndex][17] || '', // Comments in column 17
         member.associateInCharge || rows[memberIndex][18] || '',
         member.stage || rows[memberIndex][19] || ''
       ];

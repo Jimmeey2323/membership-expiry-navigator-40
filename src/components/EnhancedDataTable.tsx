@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronDown, ChevronUp, Search, ArrowUpDown, Eye, Calendar, Activity, MapPin, User, Crown, Zap, Edit, MessageSquare, Filter, Grid, List, BarChart3, Trello, Clock, LayoutGrid, Users, UserCheck, Lock } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, ArrowUpDown, Eye, Calendar, Activity, MapPin, User, Crown, Zap, Edit, MessageSquare, Filter, Grid, List, BarChart3, Trello, Clock, LayoutGrid, Users, UserCheck, Lock, FileText } from "lucide-react";
 import { MembershipData, ViewMode } from "@/types/membership";
 import { MemberDetailModal } from "./MemberDetailModal";
 import { useAdmin } from "@/contexts/AdminContext";
@@ -55,7 +55,7 @@ export const EnhancedDataTable = ({
   const itemsPerPage = 12;
 
   // Admin context for sensitive data
-  const { isAdmin, showAdminPrompt } = useAdmin();
+  const { isAdmin, showAdminPrompt, logout } = useAdmin();
 
   // Get current month range for default filtering
   const currentMonthRange = useMemo(() => getCurrentMonthDateRange(), []);
@@ -113,8 +113,24 @@ export const EnhancedDataTable = ({
     });
 
     filtered.sort((a, b) => {
-      const aValue = a[sortField];
-      const bValue = b[sortField];
+      let aValue: any = a[sortField];
+      let bValue: any = b[sortField];
+      
+      // Special handling for different field types
+      if (sortField === 'commentsText' || sortField === 'notesText') {
+        // For comments and notes, sort by the text content length or first few characters
+        aValue = (aValue || '').toString().toLowerCase();
+        bValue = (bValue || '').toString().toLowerCase();
+      } else if (sortField === 'endDate' || sortField === 'orderDate') {
+        // For dates, convert to Date objects for proper sorting
+        aValue = new Date(aValue || '1970-01-01').getTime();
+        bValue = new Date(bValue || '1970-01-01').getTime();
+      } else if (typeof aValue === 'string' && typeof bValue === 'string') {
+        // For other string fields, use case-insensitive comparison
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+      
       if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
       return 0;
@@ -369,28 +385,59 @@ export const EnhancedDataTable = ({
                     </TableHead>
                     
                     <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[200px] border-none">
-                      <MessageSquare className="h-4 w-4 mr-2 inline" />
-                      Comments
+                      <Button 
+                        variant="ghost" 
+                        className="h-auto p-0 font-semibold text-white hover:text-white/80 hover:bg-transparent"
+                        onClick={() => handleSort('commentsText')}
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Comments {getSortIcon('commentsText')}
+                      </Button>
                     </TableHead>
                     
                     <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[150px] border-none">
-                      <UserCheck className="h-4 w-4 mr-2 inline" />
-                      Associate In Charge
+                      <Button 
+                        variant="ghost" 
+                        className="h-auto p-0 font-semibold text-white hover:text-white/80 hover:bg-transparent"
+                        onClick={() => handleSort('associateInCharge')}
+                      >
+                        <UserCheck className="h-4 w-4 mr-2" />
+                        Associate In Charge {getSortIcon('associateInCharge')}
+                      </Button>
                     </TableHead>
                     
                     <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[180px] border-none">
-                      <Users className="h-4 w-4 mr-2 inline" />
-                      Stage
+                      <Button 
+                        variant="ghost" 
+                        className="h-auto p-0 font-semibold text-white hover:text-white/80 hover:bg-transparent"
+                        onClick={() => handleSort('stage')}
+                      >
+                        <Users className="h-4 w-4 mr-2" />
+                        Stage {getSortIcon('stage')}
+                      </Button>
                     </TableHead>
                     
                     <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[140px] border-none">
-                      <Calendar className="h-4 w-4 mr-2 inline" />
-                      Date/Time
+                      <Button 
+                        variant="ghost" 
+                        className="h-auto p-0 font-semibold text-white hover:text-white/80 hover:bg-transparent"
+                        onClick={() => handleSort('endDate')}
+                      >
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Date/Time {getSortIcon('endDate')}
+                      </Button>
                     </TableHead>
                     
                     {isAdmin ? (
                       <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[200px] border-none">
-                        Notes
+                        <Button 
+                          variant="ghost" 
+                          className="h-auto p-0 font-semibold text-white hover:text-white/80 hover:bg-transparent"
+                          onClick={() => handleSort('notesText')}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          Notes {getSortIcon('notesText')}
+                        </Button>
                       </TableHead>
                     ) : (
                       <TableHead className="text-white font-semibold text-sm h-14 px-4 min-w-[200px] border-none">
@@ -601,7 +648,7 @@ export const EnhancedDataTable = ({
                             
                             return latestComment?.createdAt ? (
                               <div className="text-xs text-slate-600">
-                                {formatDateTimeIST(latestComment.createdAt)}
+                                {latestComment.createdAt ? formatDateTimeIST(latestComment.createdAt) : 'Unknown date'}
                               </div>
                             ) : (
                               <span className="text-xs text-gray-400">-</span>
@@ -612,40 +659,45 @@ export const EnhancedDataTable = ({
                         {/* Notes Column - Admin Only */}
                         <TableCell className="px-4 py-2 h-[35px] max-w-[200px]">
                           {isAdmin ? (() => {
-                            // Handle both legacy string format and new structured format
-                            const notesText = member.notesText || 
-                              (Array.isArray(member.notes) ? member.notes.map(n => n.text).join('\n') : '') || '';
-                            const parsedNotes = parseAnnotationText(notesText);
-                            const latestNote = parsedNotes[parsedNotes.length - 1];
-                            
-                            return latestNote ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="text-xs text-gray-700">
-                                    <div className="truncate max-w-[180px]">{latestNote.text}</div>
-                                    {parsedNotes.length > 1 && (
-                                      <div className="text-gray-500 italic text-[10px]">+{parsedNotes.length - 1} more</div>
-                                    )}
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent className="max-w-sm">
-                                  <div className="space-y-2">
-                                    {parsedNotes.map((note, idx) => (
-                                      <div key={idx} className="border-l-2 border-green-200 pl-2">
-                                        <p className="text-sm">{note.text}</p>
-                                        {note.createdBy && (
-                                          <p className="text-xs text-gray-500 mt-1">
-                                            by {note.createdBy} • {formatDateTimeIST(note.createdAt || '')}
-                                          </p>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              <span className="text-xs text-gray-400">No notes</span>
-                            );
+                            try {
+                              // Handle both legacy string format and new structured format
+                              const notesText = member.notesText || 
+                                (Array.isArray(member.notes) ? member.notes.map(n => n.text).join('\n') : '') || '';
+                              const parsedNotes = parseAnnotationText(notesText);
+                              const latestNote = parsedNotes[parsedNotes.length - 1];
+                              
+                              return latestNote ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="text-xs text-gray-700">
+                                      <div className="truncate max-w-[180px]">{latestNote.text || 'Empty note'}</div>
+                                      {parsedNotes.length > 1 && (
+                                        <div className="text-gray-500 italic text-[10px]">+{parsedNotes.length - 1} more</div>
+                                      )}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-sm">
+                                    <div className="space-y-2">
+                                      {parsedNotes.map((note, idx) => (
+                                        <div key={idx} className="border-l-2 border-green-200 pl-2">
+                                          <p className="text-sm">{note.text || 'Empty note'}</p>
+                                          {note.createdBy && (
+                                            <p className="text-xs text-gray-500 mt-1">
+                                              by {note.createdBy} • {note.createdAt ? formatDateTimeIST(note.createdAt) : 'Unknown date'}
+                                            </p>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                <span className="text-xs text-gray-400">No notes</span>
+                              );
+                            } catch (error) {
+                              console.error('Error parsing notes:', error, member);
+                              return <span className="text-xs text-red-400">Error loading notes</span>;
+                            }
                           })() : (
                             <Button
                               variant="ghost"
@@ -932,7 +984,7 @@ export const EnhancedDataTable = ({
                                     <p className="text-sm text-slate-700">{latestComment.text}</p>
                                     <div className="flex justify-between items-center mt-2 text-xs text-slate-500">
                                       <span>by {latestComment.createdBy}</span>
-                                      <span>{formatDateTimeIST(latestComment.createdAt)}</span>
+                                      <span>{latestComment.createdAt ? formatDateTimeIST(latestComment.createdAt) : 'Unknown date'}</span>
                                     </div>
                                   </div>
                                 )}
@@ -1390,7 +1442,7 @@ export const EnhancedDataTable = ({
                                   <p className="text-xs text-slate-700 line-clamp-2">{latestComment.text}</p>
                                   <div className="flex justify-between items-center mt-1 text-xs text-slate-500">
                                     <span>by {latestComment.createdBy}</span>
-                                    <span>{formatDateTimeIST(latestComment.createdAt).split(' ')[0]}</span>
+                                    <span>{latestComment.createdAt ? formatDateTimeIST(latestComment.createdAt).split(' ')[0] : 'Unknown'}</span>
                                   </div>
                                 </div>
                               )}

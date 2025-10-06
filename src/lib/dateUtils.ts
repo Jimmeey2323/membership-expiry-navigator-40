@@ -3,52 +3,88 @@
  */
 
 export const formatDateIST = (date: Date | string): string => {
+  if (!date) return 'Unknown date';
+  
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   
-  // Convert to IST (UTC+5:30)
-  const istDate = new Date(dateObj.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+  // Check if the date is valid
+  if (isNaN(dateObj.getTime())) {
+    return 'Invalid date';
+  }
   
-  return istDate.toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
+  try {
+    // Convert to IST (UTC+5:30)
+    const istDate = new Date(dateObj.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+    
+    return istDate.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch (error) {
+    console.warn('Error formatting date:', date, error);
+    return 'Invalid date';
+  }
 };
 
 export const formatTimeIST = (date: Date | string): string => {
+  if (!date) return 'Unknown time';
+  
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   
-  // Convert to IST (UTC+5:30)
-  const istDate = new Date(dateObj.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+  // Check if the date is valid
+  if (isNaN(dateObj.getTime())) {
+    return 'Invalid time';
+  }
   
-  return istDate.toLocaleTimeString('en-IN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  });
+  try {
+    // Convert to IST (UTC+5:30)
+    const istDate = new Date(dateObj.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+    
+    return istDate.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  } catch (error) {
+    console.warn('Error formatting time:', date, error);
+    return 'Invalid time';
+  }
 };
 
 export const formatDateTimeIST = (date: Date | string): string => {
+  if (!date) return 'Unknown date';
+  
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   
-  // Convert to IST (UTC+5:30)
-  const istDate = new Date(dateObj.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+  // Check if the date is valid
+  if (isNaN(dateObj.getTime())) {
+    return 'Invalid date';
+  }
   
-  const dateStr = istDate.toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
-  
-  const timeStr = istDate.toLocaleTimeString('en-IN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  });
-  
-  return `${dateStr}, ${timeStr}`;
+  try {
+    // Convert to IST (UTC+5:30)
+    const istDate = new Date(dateObj.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+    
+    const dateStr = istDate.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    
+    const timeStr = istDate.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    
+    return `${dateStr}, ${timeStr}`;
+  } catch (error) {
+    console.warn('Error formatting date:', date, error);
+    return 'Invalid date';
+  }
 };
 
 export const getCurrentMonthDateRange = () => {
@@ -81,12 +117,13 @@ export interface ParsedAnnotation {
 }
 
 export const parseAnnotationText = (text: string): ParsedAnnotation[] => {
-  if (!text) return [];
+  if (!text || typeof text !== 'string') return [];
   
-  // Split by common delimiters that might separate different entries
-  const entries = text.split(/\n---\n|\n===\n|\n\*\*\*\n/).filter(entry => entry.trim());
-  
-  return entries.map(entry => {
+  try {
+    // Split by common delimiters that might separate different entries
+    const entries = text.split(/\n---\n|\n===\n|\n\*\*\*\n/).filter(entry => entry.trim());
+    
+    return entries.map((entry, index) => {
     const lines = entry.trim().split('\n');
     let mainText = '';
     let createdBy = '';
@@ -124,12 +161,22 @@ export const parseAnnotationText = (text: string): ParsedAnnotation[] => {
       }
     }
     
-    return {
-      text: mainText || entry.trim(),
-      createdBy: createdBy || undefined,
-      createdAt: createdAt || undefined,
-      editedBy: editedBy || undefined,
-      editedAt: editedAt || undefined
-    };
-  });
+      return {
+        text: mainText || entry.trim(),
+        createdBy: createdBy || undefined,
+        createdAt: createdAt || undefined,
+        editedBy: editedBy || undefined,
+        editedAt: editedAt || undefined
+      };
+    });
+  } catch (error) {
+    console.warn('Error parsing annotation text:', error);
+    return [{
+      text: text,
+      createdBy: undefined,
+      createdAt: undefined,
+      editedBy: undefined,
+      editedAt: undefined
+    }];
+  }
 };

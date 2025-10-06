@@ -118,8 +118,8 @@ const DashboardContent = ({
           commentsText: comments, // Use commentsText for legacy compatibility
           notesText: notes,
           tagsText: tags,
-          associateInCharge: associateInCharge || member.associateInCharge,
-          stage: stage || member.stage
+          associateInCharge: associateInCharge !== undefined ? associateInCharge : member.associateInCharge,
+          stage: stage !== undefined ? stage : member.stage
         };
         
         setLocalMembershipData(prev => {
@@ -135,8 +135,8 @@ const DashboardContent = ({
                 // Keep existing structured fields as they are (maintain type compatibility)
                 // The structured fields will be updated through the Google Sheets service
                 // Update associate and stage fields
-                associateInCharge: associateInCharge || m.associateInCharge,
-                stage: stage || m.stage,
+                associateInCharge: associateInCharge !== undefined ? associateInCharge : m.associateInCharge,
+                stage: stage !== undefined ? stage : m.stage,
                 // Add a timestamp to force React to detect changes
                 lastUpdated: Date.now()
               } as MembershipData;
