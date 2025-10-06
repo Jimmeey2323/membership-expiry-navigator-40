@@ -240,6 +240,24 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     }
   }, [member, member?.lastUpdated]);
 
+  // Helper function to format comments/notes with metadata for consistent saving
+  const formatCommentWithMetadata = (comment: Comment): string => {
+    const cleanedText = toSentenceCase(cleanText(comment.text));
+    const createdBy = comment.createdBy || 'System';
+    const timestamp = comment.timestamp || new Date();
+    let formatted = cleanedText;
+    
+    // Add metadata for parsing
+    if (createdBy !== 'Unknown') {
+      formatted += `\n[Created by: ${createdBy} at ${timestamp.toISOString()}]`;
+    }
+    if (comment.lastEditedBy && comment.lastEditedAt) {
+      formatted += `\n[Last edited by: ${comment.lastEditedBy} at ${comment.lastEditedAt.toISOString()}]`;
+    }
+    
+    return formatted;
+  };
+
   const getDaysUntilExpiry = (endDate: string) => {
     const today = new Date();
     const expiry = new Date(endDate);
@@ -419,7 +437,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     
     // Immediately update the member object to prevent stale data on reload
     if (member) {
-      const updatedCommentsText = updatedComments.map(c => toSentenceCase(cleanText(c.text))).join('\n---\n');
+      const updatedCommentsText = updatedComments.map(c => formatCommentWithMetadata(c)).join('\n---\n');
       member.commentsText = updatedCommentsText;
       // Clear structured comments to avoid conflicts
       member.comments = undefined;
@@ -435,7 +453,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     
     // Immediately update the member object to prevent stale data on reload
     if (member) {
-      const updatedNotesText = updatedNotes.map(n => toSentenceCase(cleanText(n.text))).join('\n---\n');
+      const updatedNotesText = updatedNotes.map(n => formatCommentWithMetadata(n)).join('\n---\n');
       member.notesText = updatedNotesText;
       // Clear structured notes to avoid conflicts
       member.notes = undefined;
@@ -450,13 +468,39 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     
     setIsSaving(true);
     try {
-      // Clean format without embedded metadata - store associate and timestamp separately
+      // Include associate metadata in saved format for proper parsing
       const allComments = comments.map(c => {
-        return toSentenceCase(cleanText(c.text));
+        const cleanedText = toSentenceCase(cleanText(c.text));
+        const createdBy = c.createdBy || 'System';
+        const timestamp = c.timestamp || new Date();
+        let formattedComment = cleanedText;
+        
+        // Add metadata for parsing
+        if (createdBy !== 'Unknown') {
+          formattedComment += `\n[Created by: ${createdBy} at ${timestamp.toISOString()}]`;
+        }
+        if (c.lastEditedBy && c.lastEditedAt) {
+          formattedComment += `\n[Last edited by: ${c.lastEditedBy} at ${c.lastEditedAt.toISOString()}]`;
+        }
+        
+        return formattedComment;
       }).join('\n---\n');
       
       const allNotes = notes.map(n => {
-        return toSentenceCase(cleanText(n.text));
+        const cleanedText = toSentenceCase(cleanText(n.text));
+        const createdBy = n.createdBy || 'System';
+        const timestamp = n.timestamp || new Date();
+        let formattedNote = cleanedText;
+        
+        // Add metadata for parsing
+        if (createdBy !== 'Unknown') {
+          formattedNote += `\n[Created by: ${createdBy} at ${timestamp.toISOString()}]`;
+        }
+        if (n.lastEditedBy && n.lastEditedAt) {
+          formattedNote += `\n[Last edited by: ${n.lastEditedBy} at ${n.lastEditedAt.toISOString()}]`;
+        }
+        
+        return formattedNote;
       }).join('\n---\n');
       
       // Get the most recent associate for the annotation - empty when no content
@@ -494,13 +538,39 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     if (!member) return;
     
     try {
-      // Clean format without embedded metadata - store associate and timestamp separately
+      // Include associate metadata in saved format for proper parsing
       const allComments = comments.map(c => {
-        return toSentenceCase(cleanText(c.text));
+        const cleanedText = toSentenceCase(cleanText(c.text));
+        const createdBy = c.createdBy || 'System';
+        const timestamp = c.timestamp || new Date();
+        let formattedComment = cleanedText;
+        
+        // Add metadata for parsing
+        if (createdBy !== 'Unknown') {
+          formattedComment += `\n[Created by: ${createdBy} at ${timestamp.toISOString()}]`;
+        }
+        if (c.lastEditedBy && c.lastEditedAt) {
+          formattedComment += `\n[Last edited by: ${c.lastEditedBy} at ${c.lastEditedAt.toISOString()}]`;
+        }
+        
+        return formattedComment;
       }).join('\n---\n');
       
       const allNotes = notes.map(n => {
-        return toSentenceCase(cleanText(n.text));
+        const cleanedText = toSentenceCase(cleanText(n.text));
+        const createdBy = n.createdBy || 'System';
+        const timestamp = n.timestamp || new Date();
+        let formattedNote = cleanedText;
+        
+        // Add metadata for parsing
+        if (createdBy !== 'Unknown') {
+          formattedNote += `\n[Created by: ${createdBy} at ${timestamp.toISOString()}]`;
+        }
+        if (n.lastEditedBy && n.lastEditedAt) {
+          formattedNote += `\n[Last edited by: ${n.lastEditedBy} at ${n.lastEditedAt.toISOString()}]`;
+        }
+        
+        return formattedNote;
       }).join('\n---\n');
       
       // Get the most recent associate for the annotation - empty when no content
