@@ -1,4 +1,10 @@
-import { MembershipData } from "@/types/membership";
+import { MembershipData, MemberAnnotation } from '@/types/membership';
+
+// Default filtering cutoff date: July 1, 2025
+const DEFAULT_DATE_CUTOFF = '2025-07-01';
+
+// Global state for full dataset toggle
+let useFullDataset = false;
 
 interface GoogleOAuthConfig {
   CLIENT_ID: string;
@@ -559,6 +565,34 @@ class GoogleSheetsService {
     }
   }
 
+  // Toggle methods for full dataset
+  toggleFullDataset(enabled: boolean) {
+    useFullDataset = enabled;
+  }
+
+  getIsFullDatasetEnabled(): boolean {
+    return useFullDataset;
+  }
+
+  // Apply default date filtering unless full dataset is enabled
+  private applyDefaultFiltering(data: MembershipData[]): MembershipData[] {
+    if (useFullDataset) {
+      return data;
+    }
+    
+    const cutoffDate = new Date(DEFAULT_DATE_CUTOFF);
+    return data.filter(member => {
+      if (!member.endDate) return true; // Include members without end dates
+      
+      try {
+        const memberEndDate = new Date(member.endDate);
+        return memberEndDate >= cutoffDate;
+      } catch (error) {
+        return true; // Include members with invalid dates
+      }
+    });
+  }
+
   async getMembershipData(): Promise<MembershipData[]> {
     try {
       const rawData = await this.fetchSheetData();
@@ -644,7 +678,10 @@ class GoogleSheetsService {
         await this.repairCorruptedData(membershipData);
       }
       
-      return membershipData;
+      // Apply default filtering unless full dataset is requested
+      const filteredData = this.applyDefaultFiltering(membershipData);
+      
+      return filteredData;
     } catch (error) {
       console.error('Error getting membership data:', error);
       throw error;

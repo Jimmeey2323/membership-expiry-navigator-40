@@ -62,6 +62,7 @@ const DashboardContent = ({
   const [selectedMember, setSelectedMember] = useState<MembershipData | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+  const [isFullDataset, setIsFullDataset] = useState(false);
 
   useEffect(() => {
     if (membershipData && Array.isArray(membershipData)) {
@@ -232,6 +233,25 @@ const DashboardContent = ({
     setShowFollowUpModal(false);
   };
 
+  const toggleFullDataset = async () => {
+    const newState = !isFullDataset;
+    setIsFullDataset(newState);
+    
+    // Update the service state and refresh data
+    googleSheetsService.toggleFullDataset(newState);
+    
+    try {
+      await refetch();
+      toast.success(newState 
+        ? 'Loading full dataset...' 
+        : 'Filtering to memberships ending after July 1, 2025...'
+      );
+    } catch (error) {
+      console.error('Failed to refresh data:', error);
+      toast.error('Failed to refresh data. Please try again.');
+    }
+  };
+
   // Use the global filter context to get filtered data
   const filteredData = getFilteredData(localMembershipData);
   const totalMembers = filteredData.length; // Show filtered count, not full dataset
@@ -332,6 +352,17 @@ const DashboardContent = ({
                 onUpdateMember={handleUpdateMember}
               />
               <Button 
+                onClick={toggleFullDataset}
+                variant={isFullDataset ? "default" : "outline"}
+                className={`backdrop-blur-sm ${isFullDataset 
+                  ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' 
+                  : 'bg-white/90 border-orange-200/60 hover:bg-orange-50 hover:border-orange-300 text-orange-700'
+                } transition-all duration-200 shadow-sm`}
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                {isFullDataset ? 'Full Dataset' : 'Since July 2025'}
+              </Button>
+              <Button 
                 onClick={async () => {
                   try {
                     await refetch();
@@ -419,6 +450,12 @@ const DashboardContent = ({
                 <AlertTriangle className="h-3 w-3" />
                 {churnedMembers.length} churned
               </Badge>
+              {!isFullDataset && (
+                <Badge variant="outline" className="flex items-center gap-2 backdrop-blur-sm bg-yellow-50 border-yellow-300 text-yellow-800 shadow-lg">
+                  <Calendar className="h-3 w-3" />
+                  Filtered: End date ≥ July 1, 2025
+                </Badge>
+              )}
             </div>
           </div>
 

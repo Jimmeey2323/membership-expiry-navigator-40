@@ -71,7 +71,7 @@ interface GroupableDataTableProps {
 
 type SortField = keyof MembershipData;
 type SortDirection = 'asc' | 'desc';
-type GroupByField = 'status' | 'location' | 'membershipName' | 'frozen' | 'none';
+type GroupByField = 'status' | 'location' | 'membershipName' | 'frozen' | 'associate' | 'dateAdded' | 'expiryMonth' | 'membershipTier' | 'none';
 type ViewMode = 'compact' | 'comfortable' | 'detailed' | 'card' | 'minimal';
 
 export const GroupableDataTable = ({
@@ -289,6 +289,39 @@ export const GroupableDataTable = ({
         case 'frozen':
           groupKey = member.frozen?.toLowerCase() === 'true' ? 'Frozen' : 'Active';
           break;
+        case 'associate':
+          groupKey = member.associateInCharge || member.soldBy || 'Unassigned';
+          break;
+        case 'dateAdded':
+          try {
+            const date = new Date(member.orderDate);
+            const monthYear = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+            groupKey = monthYear || 'Unknown Date';
+          } catch {
+            groupKey = 'Unknown Date';
+          }
+          break;
+        case 'expiryMonth':
+          try {
+            const date = new Date(member.endDate);
+            const monthYear = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+            groupKey = monthYear || 'Unknown Expiry';
+          } catch {
+            groupKey = 'Unknown Expiry';
+          }
+          break;
+        case 'membershipTier':
+          if (member.membershipName?.toLowerCase().includes('unlimited') || 
+              member.membershipName?.toLowerCase().includes('premium')) {
+            groupKey = 'Premium/Unlimited';
+          } else if (member.membershipName?.toLowerCase().includes('basic')) {
+            groupKey = 'Basic';
+          } else if (member.membershipName?.toLowerCase().includes('trial')) {
+            groupKey = 'Trial';
+          } else {
+            groupKey = 'Standard';
+          }
+          break;
         default:
           groupKey = 'All Members';
       }
@@ -484,7 +517,11 @@ export const GroupableDataTable = ({
                       <SelectItem value="status">By Status</SelectItem>
                       <SelectItem value="location">By Location</SelectItem>
                       <SelectItem value="membershipName">By Membership Type</SelectItem>
+                      <SelectItem value="membershipTier">By Membership Tier</SelectItem>
                       <SelectItem value="frozen">By Account Status</SelectItem>
+                      <SelectItem value="associate">By Associate</SelectItem>
+                      <SelectItem value="dateAdded">By Date Added</SelectItem>
+                      <SelectItem value="expiryMonth">By Expiry Month</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

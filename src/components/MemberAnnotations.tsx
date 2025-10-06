@@ -8,10 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AssociateSelector } from "@/components/ui/associate-selector";
-import { X, Plus, Save, Shield, RefreshCw, Users, UserCheck } from "lucide-react";
+import { X, Plus, Save, Shield, RefreshCw, Users, UserCheck, Clock, MessageSquare } from "lucide-react";
 import { MembershipData, MEMBER_STAGES } from "@/types/membership";
 import { googleSheetsService } from "@/services/googleSheets";
 import { extractFirstName } from "@/lib/textUtils";
+import { getCurrentTimestamp, formatTimestampIST, createTimestampedAnnotation } from "@/lib/timestampUtils";
 import { toast } from "sonner";
 
 interface MemberAnnotationsProps {
@@ -72,36 +73,35 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
   };
 
   const handleSave = async () => {
-    if (!member) return;
-    
-    if (!associateName) {
-      toast.error("Please select an associate name");
+    if (!member || !associateName.trim()) {
+      toast.error("Please select an associate before saving");
       return;
     }
     
     setIsSaving(true);
+    
     try {
-      // Use direct save method with all parameters including stage and associateInCharge
+      // Create timestamped annotations
+      const timestamp = getCurrentTimestamp();
+      const timestampedComments = comments ? `[${formatTimestampIST(timestamp)}] ${associateName}: ${comments}` : '';
+      const timestampedNotes = notes ? `[${formatTimestampIST(timestamp)}] ${associateName}: ${notes}` : '';
+      
       await googleSheetsService.saveAnnotation(
         member.memberId,
         member.email,
-        comments,
-        notes,
+        timestampedComments,
+        timestampedNotes,
         tags,
-        member.uniqueId,
         associateName,
-        new Date().toISOString(),
         associateInCharge,
         stage
       );
       
-      // Success feedback
-      toast.success('Annotations saved successfully!');
-      onSave(member.memberId, comments, notes, tags, associateName, associateInCharge, stage);
-      onClose();
+      toast.success("Annotation saved with timestamp!");
+      onSave(member.memberId, timestampedComments, timestampedNotes, tags, associateName, associateInCharge, stage);
     } catch (error) {
-      console.error('Error in enhanced save process:', error);
-      toast.error("Unexpected error occurred. Please try again.");
+      console.error('Error saving annotation:', error);
+      toast.error("Failed to save annotation. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -290,7 +290,10 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
 
           {/* Comments */}
           <div className="space-y-2">
-            <Label htmlFor="comments" className="text-base font-medium">Comments</Label>
+            <Label htmlFor="comments" className="text-base font-medium flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Comments
+            </Label>
             <Textarea
               id="comments"
               placeholder="Add any comments about this member..."
@@ -298,11 +301,18 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
               onChange={(e) => setComments(e.target.value)}
               className="min-h-[100px]"
             />
+            <div className="text-xs text-muted-foreground flex items-center gap-2">
+              <Clock className="h-3 w-3" />
+              Will be auto-timestamped: [{formatTimestampIST(getCurrentTimestamp())}] {associateName || 'Associate'}: [Your comment]
+            </div>
           </div>
 
           {/* Notes */}
           <div className="space-y-2">
-            <Label htmlFor="notes" className="text-base font-medium">Notes</Label>
+            <Label htmlFor="notes" className="text-base font-medium flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Internal Notes
+            </Label>
             <Textarea
               id="notes"
               placeholder="Add internal notes..."
@@ -310,6 +320,10 @@ export const MemberAnnotations = ({ member, isOpen, onClose, onSave }: MemberAnn
               onChange={(e) => setNotes(e.target.value)}
               className="min-h-[100px]"
             />
+            <div className="text-xs text-muted-foreground flex items-center gap-2">
+              <Clock className="h-3 w-3" />
+              Will be auto-timestamped: [{formatTimestampIST(getCurrentTimestamp())}] {associateName || 'Associate'}: [Your note]
+            </div>
           </div>
 
           {/* Tags */}
