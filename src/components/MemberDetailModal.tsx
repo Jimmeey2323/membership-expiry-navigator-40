@@ -157,7 +157,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
       }
 
       return {
-        id: (index + 1).toString(),
+        id: `comment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${index}`,
         text: actualText,
         timestamp,
         type: 'comment' as const,
@@ -199,7 +199,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
       }
 
       return {
-        id: (index + 1).toString(),
+        id: `note-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${index}`,
         text: actualText,
         timestamp,
         type: 'note' as const,
@@ -219,13 +219,6 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
       // Handle both legacy string format and new structured format
       const commentsText = extractStructuredText(member.commentsText, member.comments);
       const notesText = extractStructuredText(member.notesText, member.notes);
-      
-      // Debug logging
-      console.log('MemberDetailModal loading data for:', member.memberId);
-      console.log('Comments text:', commentsText);
-      console.log('Notes text:', notesText);
-      console.log('Member commentsText:', member.commentsText);
-      console.log('Member comments:', member.comments);
       
       const parsedComments = parseComments(commentsText);
       const parsedNotes = parseNotes(notesText);
@@ -466,10 +459,10 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
         return toSentenceCase(cleanText(n.text));
       }).join('\n---\n');
       
-      // Get the most recent associate for the annotation
+      // Get the most recent associate for the annotation - empty when no content
       const latestAssociate = comments.length > 0 ? comments[comments.length - 1].createdBy : 
                               notes.length > 0 ? notes[notes.length - 1].createdBy : 
-                              'System';
+                              '';
 
       // Convert TagEntry back to string array for saving
       const tagsForSaving = tags.map(tagEntry => tagEntry.tag);
@@ -510,10 +503,10 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
         return toSentenceCase(cleanText(n.text));
       }).join('\n---\n');
       
-      // Get the most recent associate for the annotation
+      // Get the most recent associate for the annotation - empty when no content
       const latestAssociate = comments.length > 0 ? comments[comments.length - 1].createdBy : 
                               notes.length > 0 ? notes[notes.length - 1].createdBy : 
-                              'System';
+                              '';
 
       // Convert TagEntry back to string array for saving
       const tagsForSaving = tags.map(tagEntry => tagEntry.tag);
