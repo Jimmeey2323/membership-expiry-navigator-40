@@ -220,6 +220,13 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
       const commentsText = extractStructuredText(member.commentsText, member.comments);
       const notesText = extractStructuredText(member.notesText, member.notes);
       
+      // Debug logging
+      console.log('MemberDetailModal loading data for:', member.memberId);
+      console.log('Comments text:', commentsText);
+      console.log('Notes text:', notesText);
+      console.log('Member commentsText:', member.commentsText);
+      console.log('Member comments:', member.comments);
+      
       const parsedComments = parseComments(commentsText);
       const parsedNotes = parseNotes(notesText);
       
@@ -238,7 +245,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
       setNotes([]);
       setTags([]);
     }
-  }, [member]);
+  }, [member, member?.lastUpdated]);
 
   const getDaysUntilExpiry = (endDate: string) => {
     const today = new Date();
@@ -256,10 +263,18 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
       type: 'comment' as const,
       createdBy: selectedName
     };
-    setComments(prev => [...prev, comment]);
+    const updatedComments = [...comments, comment];
+    setComments(updatedComments);
     setNewComment('');
-    // Keep the selected name for convenience when adding multiple entries
     
+    // Immediately update the member object
+    if (member) {
+      const updatedCommentsText = updatedComments.map(c => toSentenceCase(cleanText(c.text))).join('\n---\n');
+      member.commentsText = updatedCommentsText;
+      member.comments = undefined;
+    }
+    
+    // Keep the selected name for convenience when adding multiple entries
     // Auto-save after adding comment
     setTimeout(() => handleAutoSave(), 100);
   };
@@ -273,10 +288,18 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
       type: 'note' as const,
       createdBy: selectedName
     };
-    setNotes(prev => [...prev, note]);
+    const updatedNotes = [...notes, note];
+    setNotes(updatedNotes);
     setNewNote('');
-    // Keep the selected name for convenience when adding multiple entries
     
+    // Immediately update the member object
+    if (member) {
+      const updatedNotesText = updatedNotes.map(n => toSentenceCase(cleanText(n.text))).join('\n---\n');
+      member.notesText = updatedNotesText;
+      member.notes = undefined;
+    }
+    
+    // Keep the selected name for convenience when adding multiple entries
     // Auto-save after adding note
     setTimeout(() => handleAutoSave(), 100);
   };
@@ -296,7 +319,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
   const saveEditComment = async (commentId: string) => {
     if (!editText.trim() || !selectedName) return;
     
-    setComments(prev => prev.map(comment => 
+    const updatedComments = comments.map(comment => 
       comment.id === commentId 
         ? {
             ...comment,
@@ -305,9 +328,17 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
             lastEditedAt: new Date()
           }
         : comment
-    ));
+    );
+    setComments(updatedComments);
     setEditingComment(null);
     setEditText('');
+    
+    // Immediately update the member object
+    if (member) {
+      const updatedCommentsText = updatedComments.map(c => toSentenceCase(cleanText(c.text))).join('\n---\n');
+      member.commentsText = updatedCommentsText;
+      member.comments = undefined;
+    }
     
     // Auto-save after editing comment
     setTimeout(() => handleAutoSave(), 100);
@@ -316,7 +347,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
   const saveEditNote = async (noteId: string) => {
     if (!editText.trim() || !selectedName) return;
     
-    setNotes(prev => prev.map(note => 
+    const updatedNotes = notes.map(note => 
       note.id === noteId 
         ? {
             ...note,
@@ -325,9 +356,17 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
             lastEditedAt: new Date()
           }
         : note
-    ));
+    );
+    setNotes(updatedNotes);
     setEditingNote(null);
     setEditText('');
+    
+    // Immediately update the member object
+    if (member) {
+      const updatedNotesText = updatedNotes.map(n => toSentenceCase(cleanText(n.text))).join('\n---\n');
+      member.notesText = updatedNotesText;
+      member.notes = undefined;
+    }
     
     // Auto-save after editing note
     setTimeout(() => handleAutoSave(), 100);
@@ -350,27 +389,65 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
       createdBy: selectedName,
       timestamp: new Date()
     };
-    setTags(prev => [...prev, newTagEntry]);
+    const updatedTags = [...tags, newTagEntry];
+    setTags(updatedTags);
     setNewTag('');
+    
+    // Immediately update the member object
+    if (member) {
+      const updatedTagsText = updatedTags.map(t => t.tag);
+      member.tagsText = updatedTagsText;
+      member.tags = undefined;
+    }
     
     // Auto-save after adding tag
     setTimeout(() => handleAutoSave(), 100);
   };
 
   const removeTag = async (tagToRemove: TagEntry) => {
-    setTags(prev => prev.filter(tagEntry => tagEntry.tag !== tagToRemove.tag));
+    const updatedTags = tags.filter(tagEntry => tagEntry.tag !== tagToRemove.tag);
+    setTags(updatedTags);
+    
+    // Immediately update the member object to prevent stale data on reload
+    if (member) {
+      const updatedTagsText = updatedTags.map(t => t.tag);
+      member.tagsText = updatedTagsText;
+      // Clear structured tags to avoid conflicts
+      member.tags = undefined;
+    }
+    
     // Auto-save after removing tag
     setTimeout(() => handleAutoSave(), 100); // Small delay to ensure state updates
   };
 
   const removeComment = async (id: string) => {
-    setComments(prev => prev.filter(c => c.id !== id));
+    const updatedComments = comments.filter(c => c.id !== id);
+    setComments(updatedComments);
+    
+    // Immediately update the member object to prevent stale data on reload
+    if (member) {
+      const updatedCommentsText = updatedComments.map(c => toSentenceCase(cleanText(c.text))).join('\n---\n');
+      member.commentsText = updatedCommentsText;
+      // Clear structured comments to avoid conflicts
+      member.comments = undefined;
+    }
+    
     // Auto-save after removing comment
     setTimeout(() => handleAutoSave(), 100); // Small delay to ensure state updates
   };
 
   const removeNote = async (id: string) => {
-    setNotes(prev => prev.filter(n => n.id !== id));
+    const updatedNotes = notes.filter(n => n.id !== id);
+    setNotes(updatedNotes);
+    
+    // Immediately update the member object to prevent stale data on reload
+    if (member) {
+      const updatedNotesText = updatedNotes.map(n => toSentenceCase(cleanText(n.text))).join('\n---\n');
+      member.notesText = updatedNotesText;
+      // Clear structured notes to avoid conflicts
+      member.notes = undefined;
+    }
+    
     // Auto-save after removing note
     setTimeout(() => handleAutoSave(), 100); // Small delay to ensure state updates
   };
