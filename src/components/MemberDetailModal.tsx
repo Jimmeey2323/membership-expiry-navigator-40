@@ -1123,6 +1123,12 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                           <SelectValue placeholder="Select stage based on recent interactions..." />
                         </SelectTrigger>
                         <SelectContent className="max-h-60">
+                          <SelectItem value="">
+                            <div className="flex items-center gap-2 text-gray-500">
+                              <X className="h-4 w-4" />
+                              No Stage
+                            </div>
+                          </SelectItem>
                           {MEMBER_STAGES.map((stage) => (
                             <SelectItem key={stage} value={stage}>
                               {stage}
@@ -1130,12 +1136,19 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                           ))}
                         </SelectContent>
                       </Select>
-                      {currentStage && (
-                        <div className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                          <UserCheck className="h-3 w-3" />
-                          Current stage: {currentStage}
-                        </div>
-                      )}
+                      <div className="text-xs mt-1 flex items-center gap-1">
+                        {currentStage ? (
+                          <div className="text-green-600 flex items-center gap-1">
+                            <UserCheck className="h-3 w-3" />
+                            Current stage: {currentStage}
+                          </div>
+                        ) : (
+                          <div className="text-gray-500 flex items-center gap-1">
+                            <X className="h-3 w-3" />
+                            No stage selected
+                          </div>
+                        )}
+                      </div>
                     </div>
                     
                     <Textarea
