@@ -158,7 +158,9 @@ const DashboardContent = ({
           tags,
           member.uniqueId,
           associateName,
-          new Date().toISOString()
+          new Date().toISOString(),
+          associateInCharge,
+          stage
         );
 
         // Save to Expirations sheet (updateSingleMember)

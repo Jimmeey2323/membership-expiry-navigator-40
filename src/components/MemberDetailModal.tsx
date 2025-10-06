@@ -634,7 +634,9 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
         allComments,
         allNotes,
         tagsForSaving,
+        member.uniqueId,
         latestAssociate,
+        new Date().toISOString(),
         member.associateInCharge,
         currentStage
       );

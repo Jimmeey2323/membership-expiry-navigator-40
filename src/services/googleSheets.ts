@@ -529,21 +529,32 @@ class GoogleSheetsService {
         index > 0 && row[0] === memberId
       );
       
-      const newRow = [
-        memberId,
-        email,
-        comments || '',
-        notes || '',
-        tags.join(', '),
-        uniqueId || '',
-        associateName || '',
-        istTimestamp
-      ];
+      // Check if this is a deletion (all content empty)
+      const isCompletelyEmpty = (!comments || comments.trim() === '') && 
+                                (!notes || notes.trim() === '') && 
+                                (!tags || tags.length === 0);
       
-      if (existingIndex !== -1) {
-        annotationsData[existingIndex] = newRow;
-      } else {
-        annotationsData.push(newRow);
+      if (isCompletelyEmpty && existingIndex !== -1) {
+        // Remove the annotation row completely for deletions
+        annotationsData.splice(existingIndex, 1);
+      } else if (!isCompletelyEmpty) {
+        // Only save to annotations if there's actual content
+        const newRow = [
+          memberId,
+          email,
+          comments || '',
+          notes || '',
+          tags.join(', '),
+          uniqueId || '',
+          associateName || '',
+          istTimestamp
+        ];
+        
+        if (existingIndex !== -1) {
+          annotationsData[existingIndex] = newRow;
+        } else {
+          annotationsData.push(newRow);
+        }
       }
       
       await this.updateAnnotations(annotationsData);
@@ -551,8 +562,8 @@ class GoogleSheetsService {
       // Also update the main Expirations sheet to keep both in sync
       await this.updateSingleMember({
         memberId,
-        comments,
-        notes,
+        commentsText: comments,  // Use correct field names
+        notesText: notes,        // Use correct field names
         associateInCharge,
         stage,
         // Don't overwrite other fields, just update annotations
@@ -644,22 +655,27 @@ class GoogleSheetsService {
           const member = membershipData.find(m => m.memberId === memberId || m.email === email);
           
           if (member) {
-            // Use annotation data if main sheet data is empty, otherwise prefer main sheet data
-            if (comments && comments.trim() && (!member.commentsText || member.commentsText.trim() === '')) {
+            // ALWAYS prioritize main sheet data - only use annotation data if main sheet is completely empty
+            // This prevents deleted items from reappearing
+            
+            // For comments: only use annotation if main sheet has NO comments at all
+            if (!member.commentsText && comments && comments.trim()) {
               member.commentsText = comments;
             }
             
-            if (notes && notes.trim() && (!member.notesText || member.notesText.trim() === '')) {
+            // For notes: only use annotation if main sheet has NO notes at all
+            if (!member.notesText && notes && notes.trim()) {
               member.notesText = notes;
             }
             
-            if (tags && tags.trim() && (!member.tagsText || member.tagsText.length === 0)) {
+            // For tags: only use annotation if main sheet has NO tags at all
+            if ((!member.tagsText || member.tagsText.length === 0) && tags && tags.trim()) {
               const tagArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
               member.tagsText = tagArray;
             }
             
-            // Handle associate field from annotations
-            if (associateName && associateName.trim() && (!member.associateInCharge || member.associateInCharge.trim() === '')) {
+            // For associate: only use annotation if main sheet has NO associate data
+            if (!member.associateInCharge && associateName && associateName.trim()) {
               member.associateInCharge = associateName;
             }
           }
@@ -843,6 +859,24 @@ class GoogleSheetsService {
   // Clear annotations cache
   clearAnnotationsCache(): void {
     this.annotationsCache = null;
+  }
+
+  // Method to completely remove a member's annotations when all data is deleted
+  async deleteAnnotation(memberId: string): Promise<void> {
+    try {
+      const annotationsData = await this.fetchAnnotations();
+      const existingIndex = annotationsData.findIndex((row, index) => 
+        index > 0 && row[0] === memberId
+      );
+      
+      if (existingIndex !== -1) {
+        annotationsData.splice(existingIndex, 1);
+        await this.updateAnnotations(annotationsData);
+      }
+    } catch (error) {
+      console.error('Error deleting annotation:', error);
+      throw error;
+    }
   }
 
   // Enhanced annotation search and filtering
