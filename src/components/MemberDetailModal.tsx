@@ -247,7 +247,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const addComment = () => {
+  const addComment = async () => {
     if (!newComment.trim() || !selectedName) return;
     const comment: Comment = {
       id: Date.now().toString(),
@@ -259,9 +259,12 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     setComments(prev => [...prev, comment]);
     setNewComment('');
     // Keep the selected name for convenience when adding multiple entries
+    
+    // Auto-save after adding comment
+    setTimeout(() => handleAutoSave(), 100);
   };
 
-  const addNote = () => {
+  const addNote = async () => {
     if (!newNote.trim() || !selectedName) return;
     const note: Comment = {
       id: Date.now().toString(),
@@ -273,6 +276,9 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     setNotes(prev => [...prev, note]);
     setNewNote('');
     // Keep the selected name for convenience when adding multiple entries
+    
+    // Auto-save after adding note
+    setTimeout(() => handleAutoSave(), 100);
   };
 
   const startEditingComment = (comment: Comment) => {
@@ -287,7 +293,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     setSelectedName(note.lastEditedBy || note.createdBy || STAFF_NAMES[0]); // Set to last editor or creator
   };
 
-  const saveEditComment = (commentId: string) => {
+  const saveEditComment = async (commentId: string) => {
     if (!editText.trim() || !selectedName) return;
     
     setComments(prev => prev.map(comment => 
@@ -302,9 +308,12 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     ));
     setEditingComment(null);
     setEditText('');
+    
+    // Auto-save after editing comment
+    setTimeout(() => handleAutoSave(), 100);
   };
 
-  const saveEditNote = (noteId: string) => {
+  const saveEditNote = async (noteId: string) => {
     if (!editText.trim() || !selectedName) return;
     
     setNotes(prev => prev.map(note => 
@@ -319,6 +328,9 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     ));
     setEditingNote(null);
     setEditText('');
+    
+    // Auto-save after editing note
+    setTimeout(() => handleAutoSave(), 100);
   };
 
   const cancelEdit = () => {
@@ -328,7 +340,7 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     setSelectedName(STAFF_NAMES[0]); // Reset to default name
   };
 
-  const addTag = () => {
+  const addTag = async () => {
     if (!newTag.trim() || !selectedName) return;
     // Check if tag already exists
     if (tags.some(tagEntry => tagEntry.tag === newTag.trim())) return;
@@ -340,18 +352,27 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
     };
     setTags(prev => [...prev, newTagEntry]);
     setNewTag('');
+    
+    // Auto-save after adding tag
+    setTimeout(() => handleAutoSave(), 100);
   };
 
-  const removeTag = (tagToRemove: TagEntry) => {
+  const removeTag = async (tagToRemove: TagEntry) => {
     setTags(prev => prev.filter(tagEntry => tagEntry.tag !== tagToRemove.tag));
+    // Auto-save after removing tag
+    setTimeout(() => handleAutoSave(), 100); // Small delay to ensure state updates
   };
 
-  const removeComment = (id: string) => {
+  const removeComment = async (id: string) => {
     setComments(prev => prev.filter(c => c.id !== id));
+    // Auto-save after removing comment
+    setTimeout(() => handleAutoSave(), 100); // Small delay to ensure state updates
   };
 
-  const removeNote = (id: string) => {
+  const removeNote = async (id: string) => {
     setNotes(prev => prev.filter(n => n.id !== id));
+    // Auto-save after removing note
+    setTimeout(() => handleAutoSave(), 100); // Small delay to ensure state updates
   };
 
   const handleSave = async () => {
@@ -395,6 +416,51 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
       toast.error("Failed to save member details. Please try again.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Auto-save function for immediate updates when items are deleted/edited
+  const handleAutoSave = async () => {
+    if (!member) return;
+    
+    try {
+      // Clean format without embedded metadata - store associate and timestamp separately
+      const allComments = comments.map(c => {
+        return toSentenceCase(cleanText(c.text));
+      }).join('\n---\n');
+      
+      const allNotes = notes.map(n => {
+        return toSentenceCase(cleanText(n.text));
+      }).join('\n---\n');
+      
+      // Get the most recent associate for the annotation
+      const latestAssociate = comments.length > 0 ? comments[comments.length - 1].createdBy : 
+                              notes.length > 0 ? notes[notes.length - 1].createdBy : 
+                              'System';
+
+      // Convert TagEntry back to string array for saving
+      const tagsForSaving = tags.map(tagEntry => tagEntry.tag);
+      
+      // Save to Google Sheets immediately
+      await googleSheetsService.saveAnnotation(
+        member.memberId,
+        member.email,
+        allComments,
+        allNotes,
+        tagsForSaving,
+        latestAssociate,
+        member.associateInCharge,
+        currentStage
+      );
+      
+      // Update local state immediately
+      onSave(member.memberId, allComments, allNotes, tagsForSaving, latestAssociate, member.associateInCharge, currentStage);
+      
+      // Show subtle success feedback
+      toast.success("Changes saved automatically!", { duration: 2000 });
+    } catch (error) {
+      console.error('Error auto-saving changes:', error);
+      toast.error("Failed to auto-save changes. Please try saving manually.");
     }
   };
 
@@ -891,6 +957,8 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                         if (member) {
                           member.stage = value; // Also update the member object
                         }
+                        // Auto-save after stage change
+                        setTimeout(() => handleAutoSave(), 100);
                       }}>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select stage based on recent interactions..." />
@@ -1204,7 +1272,11 @@ export const MemberDetailModal = ({ member, isOpen, onClose, onSave }: MemberDet
                         placeholder="Enter a new tag..."
                         value={newTag}
                         onChange={(e) => setNewTag(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && addTag()}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            addTag();
+                          }
+                        }}
                         className="flex-1"
                       />
                       <Button onClick={addTag} disabled={!newTag.trim() || !selectedName}>

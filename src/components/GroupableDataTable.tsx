@@ -64,7 +64,7 @@ interface GroupableDataTableProps {
   data: MembershipData[];
   title: string;
   className?: string;
-  onAnnotationUpdate?: (memberId: string, comments: string, notes: string, tags: string[], associate?: string) => void;
+  onAnnotationUpdate?: (memberId: string, comments: string, notes: string, tags: string[], associate?: string, associateInCharge?: string, stage?: string) => void;
   onEditMember?: (member: MembershipData) => void;
   onFollowUpMember?: (member: MembershipData) => void;
 }
@@ -386,7 +386,7 @@ export const GroupableDataTable = ({
 
     const handleAnnotationSave = (memberId: string, comments: string, notes: string, tags: string[], associate?: string, associateInCharge?: string, stage?: string) => {
     if (onAnnotationUpdate) {
-      onAnnotationUpdate(memberId, comments, notes, tags, associate);
+      onAnnotationUpdate(memberId, comments, notes, tags, associate, associateInCharge, stage);
     }
     setIsDetailModalOpen(false);
     setSelectedMember(null);

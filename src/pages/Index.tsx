@@ -132,16 +132,14 @@ const DashboardContent = ({
                 commentsText: comments,
                 notesText: notes,
                 tagsText: [...tags],
-                // Update structured fields (for compatibility)
-                comments: comments,
-                notes: notes,
-                tags: tags,
+                // Keep existing structured fields as they are (maintain type compatibility)
+                // The structured fields will be updated through the Google Sheets service
                 // Update associate and stage fields
                 associateInCharge: associateInCharge || m.associateInCharge,
                 stage: stage || m.stage,
                 // Add a timestamp to force React to detect changes
                 lastUpdated: Date.now()
-              };
+              } as MembershipData;
             }
             return m;
           });
