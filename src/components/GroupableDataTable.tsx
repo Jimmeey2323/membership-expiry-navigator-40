@@ -159,11 +159,11 @@ export const GroupableDataTable = ({
 
   const getViewModeStyles = (mode: ViewMode) => {
     const styles = {
-      compact: { height: 'h-[32px]', fontSize: 'text-xs', padding: 'px-2 py-1' },
-      comfortable: { height: 'h-[40px]', fontSize: 'text-sm', padding: 'px-3 py-2' },
-      detailed: { height: 'h-[48px]', fontSize: 'text-sm', padding: 'px-4 py-3' },
-      card: { height: 'h-[56px]', fontSize: 'text-base', padding: 'px-6 py-4' },
-      minimal: { height: 'h-[28px]', fontSize: 'text-xs', padding: 'px-2 py-0.5' }
+      compact: { height: 'h-[36px]', fontSize: 'text-sm', padding: 'px-3 py-1.5' },
+      comfortable: { height: 'h-[44px]', fontSize: 'text-base', padding: 'px-4 py-2.5' },
+      detailed: { height: 'h-[52px]', fontSize: 'text-lg', padding: 'px-4 py-3' },
+      card: { height: 'h-[60px]', fontSize: 'text-lg', padding: 'px-6 py-4' },
+      minimal: { height: 'h-[32px]', fontSize: 'text-sm', padding: 'px-3 py-1' }
     };
     return styles[mode];
   };
@@ -860,7 +860,7 @@ export const GroupableDataTable = ({
                                 onClick={() => handleRowClick(member)}
                               >
                                 <TableCell className={`${styles.padding} text-left overflow-hidden`} style={{ width: columnWidths.id + 'px' }}>
-                                  <span className={`font-mono text-slate-700 font-medium truncate ${styles.fontSize}`}>{member.memberId}</span>
+                                  <span className={`font-mono text-black font-bold truncate ${styles.fontSize}`}>{member.memberId}</span>
                                 </TableCell>
                                 
                                 <TableCell className={`${styles.padding} text-left overflow-hidden`} style={{ width: columnWidths.member + 'px' }}>
@@ -869,10 +869,10 @@ export const GroupableDataTable = ({
                                       {member.firstName?.[0]}{member.lastName?.[0]}
                                     </div>
                                     <div className="flex flex-col">
-                                      <span className={`font-semibold text-slate-900 truncate ${styles.fontSize}`}>
+                                      <span className={`font-bold text-black truncate ${styles.fontSize}`}>
                                         {member.firstName} {member.lastName}
                                       </span>
-                                      <span className={`text-slate-500 truncate ${viewMode === 'minimal' ? 'hidden' : 'text-xs'}`}>
+                                      <span className={`text-slate-800 truncate font-semibold ${viewMode === 'minimal' ? 'hidden' : 'text-sm'}`}>
                                         {member.email}
                                       </span>
                                     </div>
@@ -882,7 +882,7 @@ export const GroupableDataTable = ({
                                 <TableCell className={`${styles.padding} text-left overflow-hidden`} style={{ width: columnWidths.membership + 'px' }}>
                                   <div className="flex items-center gap-1">
                                     {getMembershipIcon(member.membershipName)}
-                                    <span className={`text-slate-700 font-medium truncate ${styles.fontSize}`}>
+                                    <span className={`text-black font-bold truncate ${styles.fontSize}`}>
                                       {member.membershipName?.replace(/\b\w/g, l => l.toUpperCase())}
                                     </span>
                                   </div>
@@ -901,7 +901,7 @@ export const GroupableDataTable = ({
                                       </span>
                                     </div>
                                     {viewMode !== 'minimal' && (
-                                      <span className={`text-slate-500 ${styles.fontSize}`}>
+                                      <span className={`text-slate-700 font-semibold ${styles.fontSize}`}>
                                         {Math.abs(daysUntilExpiry)} days {isExpired ? 'overdue' : 'left'}
                                       </span>
                                     )}
@@ -911,7 +911,7 @@ export const GroupableDataTable = ({
                                 <TableCell className={`${styles.padding} text-left overflow-hidden`} style={{ width: columnWidths.location + 'px' }}>
                                   <div className="flex items-center gap-1">
                                     <MapPin className="h-3 w-3 text-slate-400" />
-                                    <span className={`text-slate-700 font-medium truncate ${styles.fontSize}`}>{member.location}</span>
+                                    <span className={`text-black font-bold truncate ${styles.fontSize}`}>{member.location}</span>
                                   </div>
                                 </TableCell>
                                 
@@ -1079,7 +1079,7 @@ export const GroupableDataTable = ({
                                       onClick={() => handleRowClick(member)}
                                     >
                                       <TableCell className={`${styles.padding} text-left overflow-hidden`} style={{ width: columnWidths.id + 'px' }}>
-                                        <span className={`font-mono text-slate-700 font-medium truncate ${styles.fontSize}`}>{member.memberId}</span>
+                                        <span className={`font-mono text-slate-900 font-semibold truncate ${styles.fontSize}`}>{member.memberId}</span>
                                       </TableCell>
                                       
                                       <TableCell className={`${styles.padding} text-left overflow-hidden`} style={{ width: columnWidths.member + 'px' }}>

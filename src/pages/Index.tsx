@@ -37,7 +37,8 @@ import {
   FileText,
   MessageSquare,
   Edit,
-  Clock
+  Clock,
+  Layers
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -409,13 +410,20 @@ const DashboardContent = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/10 to-purple-900/10 rounded-xl blur-lg opacity-50"></div>
-              <TabsList className="relative grid w-full sm:w-auto grid-cols-4 backdrop-blur-xl bg-white/90 border-white/20 shadow-lg">
+              <TabsList className="relative grid w-full sm:w-auto grid-cols-5 backdrop-blur-xl bg-white/90 border-white/20 shadow-lg">
                 <TabsTrigger 
                   value="members" 
                   className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-purple-600 data-[state=active]:text-white transition-all duration-300"
                 >
                   <Users className="h-4 w-4" />
-                  Data Table
+                  Enhanced Table
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="grouped" 
+                  className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white transition-all duration-300"
+                >
+                  <Layers className="h-4 w-4" />
+                  Groupable Table
                 </TabsTrigger>
                 <TabsTrigger 
                   value="priority" 
@@ -461,12 +469,32 @@ const DashboardContent = ({
 
         <TabsContent value="members" className="space-y-6">
           <div className="text-sm text-gray-600 mb-4">
-            Showing {filteredData.length} members
+            Showing {filteredData.length} members - Enhanced table view
           </div>
           <EnhancedDataTable
             key={refreshKey}
             data={filteredData}
-            title="Member Data Table with Multi-View Options"
+            title="Enhanced Member Data Table with Multi-View Options"
+            onAnnotationUpdate={handleAnnotationUpdate}
+            onEditMember={(member) => {
+              setSelectedMember(member);
+              setShowEditModal(true);
+            }}
+            onFollowUpMember={(member) => {
+              setSelectedMember(member);
+              setShowFollowUpModal(true);
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="grouped" className="space-y-6">
+          <div className="text-sm text-gray-600 mb-4">
+            Showing {filteredData.length} members - Groupable view with advanced filtering
+          </div>
+          <GroupableDataTable
+            key={refreshKey}
+            data={filteredData}
+            title="Advanced Member Management with Grouping & Filtering"
             onAnnotationUpdate={handleAnnotationUpdate}
             onEditMember={(member) => {
               setSelectedMember(member);

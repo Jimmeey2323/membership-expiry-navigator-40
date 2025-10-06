@@ -127,6 +127,28 @@ Add Comment → MemberAnnotations → Auto-timestamp → Save to Sheets
 Group Table → GroupableDataTable → Filter/Group Logic → Display
 ```
 
+## 🎨 **Recent UI Improvements** (Latest Update)
+
+### **Enhanced Grouping Visibility**
+- **Added dedicated "Groupable Table" tab** - Now users can clearly see and access the grouping features
+- **Separated table views** - "Enhanced Table" for standard view, "Groupable Table" for advanced grouping
+- **5-tab navigation** - Enhanced Table | Groupable Table | Priority | Analytics | Reports
+
+### **Improved Text Readability**
+- **Increased font sizes**:
+  - Minimal: `text-sm` (14px)
+  - Compact: `text-base` (16px) 
+  - Comfortable: `text-base` (16px)
+  - Detailed: `text-lg` (18px)
+  - Card: `text-lg` (18px)
+- **Darker text colors**:
+  - Member names: `text-black font-bold`
+  - Member IDs: `text-black font-bold`
+  - Membership names: `text-black font-bold`
+  - Locations: `text-black font-bold`
+  - Email addresses: `text-slate-800 font-semibold`
+  - Other details: `text-slate-700 font-semibold`
+
 ## 🚀 Usage Instructions
 
 ### Switching Between Full and Filtered Data
